@@ -30,17 +30,41 @@ def validateInput(A, At, b0, n, opts):
 def checkAdjoint(A, At, b):
     """ Check that A and At are indeed ajoints of one another
     """
-    y = np.rand.randn(b.shape);
-    Aty = At(y);
-    x = np.rand.randn(Aty.shape)
-    Ax = A(x);
+    y = np.random.randn(*b.shape);
+    Aty = At(y)
+    x = np.random.randn(*Aty.shape)
+    Ax = A(x)
     innerProduct1 = Ax[:].T@y[:]
     innerProduct2 = x[:].T@Aty[:]
     error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1);
     assert(error<1e-3 , ['Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error])
 
+def initX(A, At, b0, n, opts):
+    init_methods = {'truncatedspectral': initSpectral(A,At,b0,n,true,true,opts.verbose),
+                    'truncated': initSpectral(A,At,b0,n,true,true,opts.verbose),
+                    'spectral': initSpectral(A,At,b0,n,false,true,opts.verbose)}
+    x0 = initMethods[lower(opts.initMethod)]
+    #
+    # case {'amplitudespectral','amplitude'}
+    #     x0 = initAmplitude(A,At,b0,n,opts.verbose);
+    # case {'weightedspectral','weighted'}
+    #     x0 = initWeighted(A,At,b0,n,opts.verbose);
+    # case {'orthogonalspectral','orthogonal'}
+    #     x0 = initOrthogonal(A,At,b0,n,opts.verbose);
+    # case {'optimal','optimalspectral'}
+    #     x0 = initOptimalSpectral(A,At,b0,n,true,opts.verbose);
+    # case 'angle'
+    #     assert(isfield(opts,'xt'),'The true solution, opts.xt, must be specified to use the angle initializer.')
+    #     assert(isfield(opts,'initAngle'),'An angle, opts.initAngle, must be specified (in radians) to use the angle initializer.')
+    #     x0 = initAngle(opts.xt, opts.initAngle);
+    # case 'custom'
+    #     x0 = opts.customx0;
+    # otherwise
+    #     error('Unknown initialization method "%s"', opts.initMethod);
+    return x0
 
-def solvePhaseRetrieval(A, At, b0, n, opts=None):
+
+def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
     """ This method solves the problem:
                           Find x given b0 = |Ax+epsilon|
      Where A is a m by n complex matrix, x is a n by 1 complex vector, b0 is a m by 1 real,non-negative vector and epsilon is a m by 1 vector. The user supplies function handles A, At and measurement b0. Note: The unknown signal to be recovered must be 1D for our interface.
@@ -155,19 +179,22 @@ def solvePhaseRetrieval(A, At, b0, n, opts=None):
 
     # If A is a matrix, infer n and At from A
     # print(A.shape >(100, 0))
-    if A.shape > (0, 0):
-        n = A.shape[1]
+    if Am.shape > (0, 0):
+        n = Am.shape[1]
         # Transform matrix into function form
-        At = lambda x: A.T@x
-        A = lambda x: A@x
+        print(Am.T@b0)
 
+        At = lambda x: Am.T@x
+        A = lambda x: Am@x
+    else:
+        A = Am
+        At = Atm
     # Check that inputs are of valid datatypes and sizes
     validateInput(A, At, b0, n, opts)
-    # % Check that At is the adjoint/transpose of A
-    # checkAdjoint(A, At, b0);
-    #
-    #
-    # x0 = initX(A, At, b0, n, opts); % Initialize x0
+    # Check that At is the adjoint/transpose of A
+    checkAdjoint(A, At, b0)
+    # Initialize x0
+    x0 = initX(A, At, b0, n, opts)
     # % Truncate imaginary components of x0 if working with real values
     # if ~opts.isComplex
     #     x0 = real(x0);
