@@ -12,6 +12,7 @@ __author__ = 'Juan M. Bujjamer'
 __all__ = ['buildTestProblem']
 
 import numpy as np
+from scipy.sparse.linalg import LinearOperator
 from numpy.random import multivariate_normal as mvnrnd
 
 class Options(object):
@@ -164,6 +165,71 @@ class Container(object):
         if opts.recordResiduals:
             self.residuals = np.zeros(opts.maxIters)
 
+class ConvMatrix(object):
+    """ Convolution matrix container.
+    """
+    def __init__(self, A):
+        self.shape = A.shape
+        matvec = lambda x: A@x
+        self.matrix = LinearOperator(A.shape, matvec)
+
+    def transpose(self):
+        return
+
+    def lsqr(self):
+        return
+
+    def product(self, x):
+        self.matrix.matvec(x)
+        return
+
+    def eigs(self):
+        return
+
+def stopNow(opts, currentTime, currentResid, currentReconError):
+    """
+    Used in the main loop of many solvers (i.e.solve*.m) to
+    check if the stopping condition(time, residual and reconstruction error)
+    has been met and thus loop should be breaked.
+
+
+    Note:
+    This function does not check for max iterations since the for-loop
+    in the solver already gurantee it.
+
+    Inputs:
+    opts(struct)                   :  consists of options. It is as
+                  defined in solverPhaseRetrieval.
+                  See its header or User Guide
+                  for details.
+    currentResid(real number)      :  Definition depends on the
+                  specific algorithm used see the
+                  specific algorithm's file's
+                  header for details.
+    currentReconError(real number) :  norm(xt-x)/norm(xt), where xt
+                  is the m x 1 true signal,
+                  x is the n x 1 estimated signal
+                  at current iteration.
+    Outputs:
+    ifStop(boolean)                :  If the stopping condition has
+                  been met.
+
+
+
+    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+    Christoph Studer, & Tom Goldstein
+    Copyright (c) University of Maryland, 2017
+    """
+    if currentTime >= opts.maxTime:
+        return True
+
+    if opts.xt
+        assert currentReconError, 'If xt is provided, currentReconError must be provided.'
+        ifStop = currentReconError < opts.tol
+    else
+        assert currentResid, 'If xt is not provided, currentResid must be provided.'
+        ifStop = currentResid < opts.tol
+    return ifStop
 
 def  displayVerboseOutput(iter, currentTime, currentResid=None, currentReconError=None, currentMeasurementError=None):
     """ Prints out the convergence information at the current

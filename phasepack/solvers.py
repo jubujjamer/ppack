@@ -26,6 +26,7 @@ def validateInput(A, At, b0, n, opts):
         raise Exception('If A is a function handle, then At and n must be provided')
 
     assert (np.abs(b0) == b0).all, 'b must be real-valued and non-negative'
+
     if callable(A) and type(At) == np.ndarray:
         raise Exception('If A is a function handle, then At must also be a function handle')
 
@@ -37,12 +38,12 @@ def checkAdjoint(A, At, b):
     """
     y = np.random.randn(*b.shape);
     # Aty = At(y) # Check
-    Aty = At@y
+    Aty = At.product(y) #At@y
     x = np.random.randn(*Aty.shape)
     # Ax = A(x) # check
-    Ax = A@x
-    innerProduct1 = Ax[:].T@y[:]
-    innerProduct2 = x[:].T@Aty[:]
+    Ax = A.product(x) #Ax = A@x
+    innerProduct1 = Ax.T@y
+    innerProduct2 = x.T@Aty
     error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1);
     assert error<1e-3 , 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
 
@@ -220,24 +221,18 @@ def solveFienup(A, At, b0, x0, opts):
         # Display verbose output if specified
         if opts.verbose == 2:
           displayVerboseOutput(iter, currentTime, currentResid, currentReconError, currentMeasurementError)
-#
-#         %  Test stopping criteria.
-#         if stopNow(opts, currentTime, currentResid, currentReconError)
-#             break;
-#         end
-#         % -----------------------------------------------------------------------
-#
-#
-#
-#         % Solve the least-squares problem
-#         %  gkp = \argmin ||Ax-Gkp||^2.
-#         % If A is a matrix,
-#         %  gkp = inv(A)*Gkp
-#         % If A is a fourier transform( and measurements are not oversampled i.e. m==n),
-#         %  gkp = inverse fourier transform of Gkp
-#         % Use the evalc() to capture text output, thus preventing
-#         % the conjugate gradient solver from printing to the screen.
-#         evalc('gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.maxInnerIters,[],[],gk)');
+
+        #  Test stopping criteria.
+        if stopNow(opts, currentTime, currentResid, currentReconError):
+            break
+        # Solve the least-squares problem
+        # gkp = \argmin ||Ax-Gkp||^2.
+        # If A is a matrix,
+        # gkp = inv(A)*Gkp
+        # If A is a fourier transform( and measurements are not oversampled i.e. m==n),
+        # gkp = inverse fourier transform of Gkp
+        gkp = A.lsqr(Gkp, opts.tol/100, opts.maxInnerIters, gk)
+        # gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.maxInnerIters,[],[],gk)
 #
 #         % If the signal is real and non-negative, Fienup updates object domain
 #         % following the constraint
@@ -453,8 +448,8 @@ def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
     if Am.shape > (0, 0):
         n = Am.shape[1]
         # Transform matrix into function form
-        At = Am.T
-        A = Am
+        At = ConvMatrix(Am.T)
+        A = ConvMatrix(Am)
 
     # Check that inputs are of valid datatypes and sizes
     validateInput(A, At, b0, n, opts)
