@@ -109,6 +109,10 @@ class Options(object):
         for key, val in SpecDefaults[self.algorithm.lower()].items():
             setattr(self, key, val)
 
+        for key, val in GeneralOptsDefault.items():
+            if key in kwargs.keys():
+                setattr(self, key, kwargs[key])
+
     def getDefaultOpts(self):
         """ Obtain and apply default options that relevant to the specified algorithm
         """
@@ -120,6 +124,85 @@ class Options(object):
     def applyOpts(self):
         return
 
+class Container(object):
+    """
+    This function initializes and outputs containers for convergence info
+    according to user's choice. It is invoked in solve*.m.
+
+    Inputs:
+            opts(struct)              :  consists of options.
+    Outputs:
+            solveTimes(struct)        :  empty [] or initialized with
+                                         opts.maxIters x 1 zeros if
+                                         recordTimes.
+            measurementErrors(struct) :  empty [] or initialized with
+                                         opts.maxIters x 1 zeros if
+                                         recordMeasurementErrors.
+            reconErrors(struct)       :  empty [] or initialized with
+                                         opts.maxIters x 1 zeros if
+                                         recordReconErrors.
+            residuals(struct)         :  empty [] or initialized with
+                                         opts.maxIters x 1 zeros if
+                                         recordResiduals.
+
+    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+    Christoph Studer, & Tom Goldstein
+    Copyright (c) University of Maryland, 2017
+    """
+    def __init__(self, opts):
+        self.solveTimes = None
+        self.measurementErrors = None
+        self.reconErrors = None
+        self.residuals = None
+
+        if opts.recordTimes:
+            self.solveTimes = np.zeros(opts.maxIters)
+        if opts.recordMeasurementErrors:
+            self.measurementErrors = np.zeros(opts.maxIters)
+        if opts.recordReconErrors:
+            self.reconErrors = np.zeros(opts.maxIters)
+        if opts.recordResiduals:
+            self.residuals = np.zeros(opts.maxIters)
+
+
+def  displayVerboseOutput(iter, currentTime, currentResid=None, currentReconError=None, currentMeasurementError=None):
+    """ Prints out the convergence information at the current
+    iteration. It will be invoked inside solve*.m if opts.verbose is set
+    to be >=1.
+
+    Inputs:
+      iter(integer)                        : Current iteration number.
+      currentTime(real number)             : Elapsed time so far(clock starts
+                                             when the algorithm main loop
+                                             started).
+      currentResid(real number)            : Definition depends on the
+                                             specific algorithm used see the
+                                             specific algorithm's file's
+                                             header for details.
+      currentReconError(real number)       : relative reconstruction error.
+                                             norm(xt-x)/norm(xt), where xt
+                                             is the m x 1 true signal, x is
+                                             the n x 1 estimated signal.
+
+      currentMeasurementError(real number) : norm(abs(Ax)-b0)/norm(b0), where
+                                             A is the m x n measurement
+                                             matrix or function handle
+                                             x is the n x 1 estimated signal
+                                             and b0 is the m x 1
+                                             measurements.
+
+    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+    Christoph Studer, & Tom Goldstein
+    Copyright (c) University of Maryland, 2017
+    """
+    print('Iteration = %d' % iter)
+    print('IterationTime = %f' % currentTime)
+    if currentResid:
+        print('Residual = %d' % currentResid)
+    if currentReconError:
+        print('currentReconError = %d' %currentReconError)
+    if currentMeasurementError:
+        print('MeasurementError = %d' %currentMeasurementError)
 
 def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Gaussian'):
     """ Creates and outputs random generated data and measurements according to user's choice. It is invoked in test*.m in order to build a test problem.
@@ -150,8 +233,6 @@ def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Ga
         At = A.T;
         x = mvnrnd(np.zeros(n), np.eye(n)/2) + isComplex*1j*mvnrnd(np.zeros(n), np.eye(n)/2)
         xt = x.reshape((-1, 1))
-        print(A)
-        print(xt)
         b0 = np.abs(A@xt);
 
     # elif dataType.lower() is 'fourier':

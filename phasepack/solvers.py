@@ -11,39 +11,46 @@ __version__ = "1.0.0"
 __author__ = 'Juan M. Bujjamer'
 __all__ = ['solvePhaseRetrieval']
 
+import time
+import warnings
 import numpy as np
-from phasepack.util import Options
+from numpy.linalg import norm
+from phasepack.util import Options, Container
+from phasepack.initializers import initSpectral
+
 
 def validateInput(A, At, b0, n, opts):
 
-    assert(n>0, 'n must be positive')
+    assert n>0, 'n must be positive'
     if not type(A) == np.ndarray and At == None:
         raise Exception('If A is a function handle, then At and n must be provided')
 
-    assert(np.abs(b0) == b0, 'b must be real-valued and non-negative');
+    assert (np.abs(b0) == b0).all, 'b must be real-valued and non-negative'
     if callable(A) and type(At) == np.ndarray:
         raise Exception('If A is a function handle, then At must also be a function handle')
 
     if opts.customx0:
-        assert(np.shape(opts.customx0) == (n, 1), 'customx0 must be a column vector of length n')
+        assert np.shape(opts.customx0) == (n, 1), 'customx0 must be a column vector of length n'
 
 def checkAdjoint(A, At, b):
     """ Check that A and At are indeed ajoints of one another
     """
     y = np.random.randn(*b.shape);
-    Aty = At(y)
+    # Aty = At(y) # Check
+    Aty = At@y
     x = np.random.randn(*Aty.shape)
-    Ax = A(x)
+    # Ax = A(x) # check
+    Ax = A@x
     innerProduct1 = Ax[:].T@y[:]
     innerProduct2 = x[:].T@Aty[:]
     error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1);
-    assert(error<1e-3 , ['Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error])
+    assert error<1e-3 , 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
 
 def initX(A, At, b0, n, opts):
-    init_methods = {'truncatedspectral': initSpectral(A,At,b0,n,true,true,opts.verbose),
-                    'truncated': initSpectral(A,At,b0,n,true,true,opts.verbose),
-                    'spectral': initSpectral(A,At,b0,n,false,true,opts.verbose)}
-    x0 = initMethods[lower(opts.initMethod)]
+    initMethods = {'truncatedspectral': initSpectral(A, At, b0, n, True, True, opts.verbose),
+                    'truncated': initSpectral(A, At, b0, n, True, True, opts.verbose),
+                    'spectral': initSpectral(A, At, b0, n, False, True, opts.verbose)}
+    x0 = initMethods[opts.initMethod.lower()]
     #
     # case {'amplitudespectral','amplitude'}
     #     x0 = initAmplitude(A,At,b0,n,opts.verbose);
@@ -62,6 +69,261 @@ def initX(A, At, b0, n, opts):
     # otherwise
     #     error('Unknown initialization method "%s"', opts.initMethod);
     return x0
+
+def optsCustomAlgorithm(A, At, b0, x0, opts):
+    return
+
+def solveAmplitudeFlow(A, At, b0, x0, opts):
+    return
+
+def solveCoordinateDescent(A, At, b0, x0, opts):
+    return
+
+def solveFienup(A, At, b0, x0, opts):
+    """ Solver for Fienup algorithm.
+
+   Inputs:
+      A:    m x n matrix or a function handle to a method that
+            returns A*x.
+      At:   The adjoint (transpose) of 'A'. If 'A' is a function handle,
+            'At' must be provided.
+      b0:   m x 1 real,non-negative vector consists of all the measurements.
+      x0:   n x 1 vector. It is the initial guess of the unknown signal x.
+      opts: A struct consists of the options for the algorithm. For details,
+            see header in solvePhaseRetrieval.m or the User Guide.
+
+      Note: When a function handle is used, the
+      value of 'At' (a function handle for the adjoint of 'A') must be
+      supplied.
+
+   Outputs:
+      sol:  n x 1 vector. It is the estimated signal.
+      outs: A struct consists of the convergence info. For details,
+            see header in solvePhaseRetrieval.m or the User Guide.
+
+
+   See the script 'testFienup.m' for an example of proper usage of this
+   function.
+
+  % Notations
+   The notations mainly follow those used in Section 2 of the Fienup paper.
+   gk:    g_k   the guess to the signal before the k th round
+   gkp:   g_k'  the approximation to the signal after the k th round of
+          iteration
+   gknew: g_k+1 the guess to the signal before the k+1 th round
+   Gkp:   G_k'  the approximation to fourier transfor of the signal after
+                satisfying constraints on fourier-domain
+   beta:  \beta the Tuning parameter for object-domain update
+
+  % Algorithm Description
+   Fienup Algorithm is the same as Gerchberg-Saxton Algorithm except when
+   the signal is real and non-negative (or has constraint in general). When
+   this happens, the update on the object domain is different.
+
+   Like Gerchberg-Saxton, Fienup transforms back and forth between the two
+   domains, satisfying the constraints in one before returning to the
+   other. The method has four steps (1) Left multipy the current estimation
+   x by the measurement matrix A and get Ax. (2) Keep phase, update the
+   magnitude using the measurements b0, z = b0.*sign(Ax). (3) Solve the
+   least-squares problem
+            sol = \argmin ||Ax-z||^2
+       to get our new estimation x. We use Matlab built-in solver lsqr()
+       for this least square problem.
+   (4) Impose temporal constraints on x(This step is ignored when there is
+   no constraints)
+
+   For a detailed explanation, see the Fienup paper referenced below.
+
+
+  % References
+   Paper Title:   Phase retrieval algorithms: a comparison
+   Place:         Section II for notation and Section V for the
+                  Input-Output Algorithm
+   Authors:       J. R. Fienup
+   Address: https://www.osapublishing.org/ao/abstract.cfm?uri=ao-21-15-2758
+
+  PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+  Christoph Studer, & Tom Goldstein
+  Copyright (c) University of Maryland, 2017
+
+    """
+
+    def validateOptions(opts):
+        try:
+            float(opts.FienupTuning)
+        except:
+            raise Exception("%s should be a number" % opts.FienupTuning)
+#
+    # Initialization
+    gk = x0;                      # Initial Guess, corresponds to g_k in the paper
+    gkp = x0;                     # corresponds to g_k' in the paper
+    gknew = x0;                   # corresponds to g_k+1 in the paper
+    beta = opts.FienupTuning;     # GS tuning parameter
+#
+    # Initialize values potentially computed at each round.
+    currentTime = []
+    currentResid = []
+    currentReconError = []
+    currentMeasurementError = []
+
+    # Initialize vectors for recording convergence information
+    # [solveTimes,measurementErrors,reconErrors,residuals] = initializeContainers(opts);
+    container = Container(opts)
+
+#     % Build a function handle for matlab's conjugate-gradient solver
+#     function y = Afun(x,transp_flag)
+#        if strcmp(transp_flag,'transp')       % y = A'*x
+#           y = At(x);
+#        elseif strcmp(transp_flag,'notransp') % y = A*x
+#           y = A(x);
+#        end
+#     end
+#
+    startTime = time.time() # Start timer
+#
+    for iter in range(opts.maxIters):
+#
+#         Ax = A(gk);            % Intermediate value to save repetitive computation
+#         Gkp = b0.*sign(Ax);    % Calculate the initial spectral magnitude, G_k' in the paper.
+        Ax = A@gk            # Intermediate value to save repetitive computation
+        Gkp = b0*np.sign(Ax)    #
+        #-----------------------------------------------------------------------
+        # Record convergence information and check stopping condition
+        # If xt is provided, reconstruction error will be computed and used for stopping
+        # condition. Otherwise, residual will be computed and used for stopping
+        # condition.
+        if opts.xt:
+            x = gk
+            xt = opts.xt
+            # Compute optimal rotation
+            alpha = (x.T@xt)/(x.T@x)
+            x = alpha*x
+            currentReconError = norm(x-xt)/norm(xt);
+            if opts.recordReconErrors:
+                container.reconErrors[iter] = currentReconError
+
+#
+        if not opts.xt or opts.recordResiduals:
+            currentResid = norm(At@(Ax-Gkp))/norm(Gkp)
+
+        if opts.recordResiduals:
+            container.residuals[iter] = currentResid
+
+        currentTime = time.time()-startTime  #Record elapsed time so far
+        if opts.recordTimes:
+            container.solveTimes[iter] = currentTime;
+
+        if opts.recordMeasurementErrors:
+            currentMeasurementError = norm(np.abs(A@gk)-b0)/norm(b0)
+            container.measurementErrors[iter] = currentMeasurementError
+#
+        # Display verbose output if specified
+        if opts.verbose == 2:
+          displayVerboseOutput(iter, currentTime, currentResid, currentReconError, currentMeasurementError)
+#
+#         %  Test stopping criteria.
+#         if stopNow(opts, currentTime, currentResid, currentReconError)
+#             break;
+#         end
+#         % -----------------------------------------------------------------------
+#
+#
+#
+#         % Solve the least-squares problem
+#         %  gkp = \argmin ||Ax-Gkp||^2.
+#         % If A is a matrix,
+#         %  gkp = inv(A)*Gkp
+#         % If A is a fourier transform( and measurements are not oversampled i.e. m==n),
+#         %  gkp = inverse fourier transform of Gkp
+#         % Use the evalc() to capture text output, thus preventing
+#         % the conjugate gradient solver from printing to the screen.
+#         evalc('gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.maxInnerIters,[],[],gk)');
+#
+#         % If the signal is real and non-negative, Fienup updates object domain
+#         % following the constraint
+#         if opts.isComplex == false & opts.isNonNegativeOnly == true
+#
+#             inds = gkp<0;  % Get indices that are outside the non-negative constraints
+#                            % May also need to check if isreal
+#             inds2 = ~inds; % Get the complementary indices
+#
+#             % hybrid input-output (see Section V, Equation (44))
+#             gknew(inds) = gk(inds) - beta*gkp(inds);
+#             gknew(inds2) = gkp(inds2);
+#         else % Otherwise, its update is the same as the GerchBerg-Saxton algorithm
+#             gknew = gkp;
+#         end
+#         gk = gknew;               % update gk
+#
+#     end
+#
+#     sol = gk;
+#     % Create output according to the options chosen by user
+#     outs = generateOutputs(opts, iter, solveTimes, measurementErrors, reconErrors, residuals);
+#
+#     % Display verbose output if specified
+#     if opts.verbose == 1
+#         displayVerboseOutput(iter, currentTime, currentResid, currentReconError, currentMeasurementError);
+#     end
+# end
+#
+#
+# % Check the validify of algorithm specific options
+
+
+    return 5, 5
+
+def solveGerchbergSaxton(A, At, b0, x0, opts):
+    return
+
+def solveKaczmarzSimple(A, At, b0, x0, opts):
+    return
+def solvePhaseMax(A, At, b0, x0, opts):
+    return
+
+def solvePhaseLamp(A, At, b0, x0, opts):
+    return
+
+def solvePhaseLift(A, At, b0, x0, opts):
+    return
+
+def solveRAF(A, At, b0, x0, opts):
+    return
+
+def solveRWF(A, At, b0, x0, opts):
+    return
+
+def solveSketchyCGM(A, At, b0, x0, opts):
+    return
+
+def solveTAF(A, At, b0, x0, opts):
+    return
+
+def solveTWF(A, At, b0, x0, opts):
+    return
+
+def solveWirtFlow(A, At, b0, x0, opts):
+    return
+
+def solveX(A, At, b0, x0, opts):
+    chooseAlgorithm = {'custom': optsCustomAlgorithm(A, At, b0, x0, opts),
+                   'amplitudeflow': solveAmplitudeFlow(A, At, b0, x0, opts),
+                   'coordinatedescent': solveCoordinateDescent(A, At, b0, x0, opts),
+                   'fienup': solveFienup(A, At, b0, x0, opts),
+                   'gerchbergsaxton': solveGerchbergSaxton(A, At, b0, x0, opts),
+                   'kaczmarz': solveKaczmarzSimple(A, At, b0, x0, opts),
+                   'phasemax': solvePhaseMax(A, At, b0, x0, opts),
+                   'phaselamp': solvePhaseLamp(A, At, b0, x0, opts),
+                   'phaselift': solvePhaseLift(A, At, b0, x0, opts),
+                   'raf': solveRAF(A, At, b0, x0, opts),
+                   'rwf': solveRWF(A, At, b0, x0, opts),
+                   'sketchycgm': solveSketchyCGM(A, At, b0, x0, opts),
+                   'taf': solveTAF(A, At, b0, x0, opts),
+                   'twf': solveTWF(A, At, b0, x0, opts),
+                   'wirtflow': solveWirtFlow(A, At, b0, x0, opts)}
+    sol, outs = chooseAlgorithm[opts.algorithm.lower()]
+
+    return sol, outs
 
 
 def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
@@ -179,16 +441,21 @@ def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
 
     # If A is a matrix, infer n and At from A
     # print(A.shape >(100, 0))
+    # if Am.shape > (0, 0):
+    #     n = Am.shape[1]
+    #     # Transform matrix into function form
+    #     At = lambda x: Am.T@x
+    #     A = lambda x: Am@x
+    # else:
+    #     A = Am
+    #     At = Atm
+
     if Am.shape > (0, 0):
         n = Am.shape[1]
         # Transform matrix into function form
-        print(Am.T@b0)
-
-        At = lambda x: Am.T@x
-        A = lambda x: Am@x
-    else:
+        At = Am.T
         A = Am
-        At = Atm
+
     # Check that inputs are of valid datatypes and sizes
     validateInput(A, At, b0, n, opts)
     # Check that At is the adjoint/transpose of A
@@ -196,114 +463,9 @@ def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
     # Initialize x0
     x0 = initX(A, At, b0, n, opts)
     # % Truncate imaginary components of x0 if working with real values
-    # if ~opts.isComplex
-    #     x0 = real(x0);
-    # else
-    #     if opts.isNonNegativeOnly
-    #         warning('opts.isNonNegativeOnly will not be used when the signal is complex.');
-    #     end
-    # end
-    #
-    #
-    # [sol, outs] = solveX(A, At, b0, x0, opts); % Solve the problem using the specified algorithm
-    # end
-    #
-    # %% Helper functions
-    #
-    # % Initialize x0 using the specified initialization method
-    # function x0 = initX(A, At, b0, n, opts)
-    # switch lower(opts.initMethod)
-    #     case {'truncatedspectral','truncated'}
-    #         x0 = initSpectral(A,At,b0,n,true,true,opts.verbose);  % isTruncated, isScaled?
-    #     case 'spectral'
-    #         x0 = initSpectral(A,At,b0,n,false,true,opts.verbose); % isTruncated, isScaled?
-    #     case {'amplitudespectral','amplitude'}
-    #         x0 = initAmplitude(A,At,b0,n,opts.verbose);
-    #     case {'weightedspectral','weighted'}
-    #         x0 = initWeighted(A,At,b0,n,opts.verbose);
-    #     case {'orthogonalspectral','orthogonal'}
-    #         x0 = initOrthogonal(A,At,b0,n,opts.verbose);
-    #     case {'optimal','optimalspectral'}
-    #         x0 = initOptimalSpectral(A,At,b0,n,true,opts.verbose);
-    #     case 'angle'
-    #         assert(isfield(opts,'xt'),'The true solution, opts.xt, must be specified to use the angle initializer.')
-    #         assert(isfield(opts,'initAngle'),'An angle, opts.initAngle, must be specified (in radians) to use the angle initializer.')
-    #         x0 = initAngle(opts.xt, opts.initAngle);
-    #     case 'custom'
-    #         x0 = opts.customx0;
-    #     otherwise
-    #         error('Unknown initialization method "%s"', opts.initMethod);
-    # end
-    # end
-    #
-    # % Estimate x0 using the specified algorithm
-    # function [sol, outs] = solveX(A, At, b0, x0, opts)
-    # switch lower(opts.algorithm)
-    #     case 'custom'
-    #         [sol, outs] = optsCustomAlgorithm(A, At, b0, x0, opts);
-    #     case 'amplitudeflow'
-    #         [sol, outs] = solveAmplitudeFlow(A, At, b0, x0, opts);
-    #     case 'coordinatedescent'
-    #         [sol, outs] = solveCoordinateDescent(A, At, b0, x0, opts);
-    #     case 'fienup'
-    #         [sol, outs] = solveFienup(A, At, b0, x0, opts);
-    #     case 'gerchbergsaxton'
-    #         [sol, outs] = solveGerchbergSaxton(A, At, b0, x0, opts);
-    #     case 'kaczmarz'
-    #         [sol, outs] = solveKaczmarzSimple(A, At, b0, x0, opts);
-    #     case 'phasemax'
-    #         [sol, outs] = solvePhaseMax(A, At, b0, x0, opts);
-    #     case 'phaselamp'
-    #         [sol, outs] = solvePhaseLamp(A, At, b0, x0, opts);
-    #     case 'phaselift'
-    #         [sol, outs] = solvePhaseLift(A, At, b0, x0, opts);
-    #     case 'raf'
-    #         [sol, outs] = solveRAF(A, At, b0, x0, opts);
-    #     case 'rwf'
-    #         [sol, outs] = solveRWF(A, At, b0, x0, opts);
-    #     case 'sketchycgm'
-    #         [sol, outs] = solveSketchyCGM(A, At, b0, x0, opts);
-    #     case 'taf'
-    #         [sol, outs] = solveTAF(A, At, b0, x0, opts);
-    #     case 'twf'
-    #         [sol, outs] = solveTWF(A, At, b0, x0, opts);
-    #     case 'wirtflow'
-    #         [sol, outs] = solveWirtFlow(A, At, b0, x0, opts);
-    #     otherwise
-    #         error('Unknown algorithm "%s"', opts.algorithm);
-    # end
-    # end
-    #
-    # % Check validity of input
-    # function validateInput(A, At, b0, n, opts)
-    # if ~isnumeric(A) & (isempty(At)|isempty(n))
-    #     error('If A is a function handle, then At and n must be provided')
-    # end
-    #
-    # assert(n > 0, 'n must be positive');
-    #
-    # assert(isequal(abs(b0), b0), 'b must be real-valued and non-negative');
-    #
-    # if ~isnumeric(A) & isnumeric(At)
-    #     error('If A is a function handle, then At must also be a function handle');
-    # end
-    #
-    # if ~isempty(opts.customx0)
-    #     assert(isequal(size(opts.customx0), [n 1]), ...
-    #         'customx0 must be a column vector of length n');
-    # end
-    #
-    # end
-    #
-    # % Check that A and At are indeed ajoints of one another
-    # function checkAdjoint(A, At, b)
-    # y = randn(size(b));
-    # Aty = At(y);
-    # x = randn(size(Aty));
-    # Ax = A(x);
-    #
-    # innerProduct1 = Ax(:)'*y(:);
-    # innerProduct2 = x(:)'*Aty(:);
-    # error = abs(innerProduct1-innerProduct2)/abs(innerProduct1);
-    # assert(error<1e-3 , ['Invalid measurement operator:  At is not the adjoint of A.  Error = ',num2str(error)]);
-    # end
+    if not opts.isComplex:
+        x0 = np.real(x0)
+    elif opts.isNonNegativeOnly:
+        warnings.warn('opts.isNonNegativeOnly will not be used when the signal is complex.');
+
+    [sol, outs] = solveX(A, At, b0, x0, opts) # Solve the problem using the specified algorithm
