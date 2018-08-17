@@ -116,6 +116,7 @@ def  initSpectral(A, At, b0, n,  isScaled=False, isTruncated=False, verbose=Fals
     # in the TWF paper Algorithm 1
     # Yfunc = lambda x : 1/m*At((idx.*b0.^2).*A(x))
     Ymat = 1/m*At@((idx*b0**2)*A)
+    # Y = 1/m*At.product()
     # Our implemention uses Matlab's built-in function eigs() to get the leading
     # eigenvector because of greater efficiency.
     # Create opts struct for eigs

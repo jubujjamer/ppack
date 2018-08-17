@@ -110,9 +110,6 @@ class Options(object):
         for key, val in SpecDefaults[self.algorithm.lower()].items():
             setattr(self, key, val)
 
-        for key, val in GeneralOptsDefault.items():
-            if key in kwargs.keys():
-                setattr(self, key, kwargs[key])
 
     def getDefaultOpts(self):
         """ Obtain and apply default options that relevant to the specified algorithm
