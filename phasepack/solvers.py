@@ -15,7 +15,7 @@ import time
 import warnings
 import numpy as np
 from numpy.linalg import norm
-from phasepack.util import Options, Container
+from phasepack.util import Options, Container, ConvMatrix, stopNow
 from phasepack.initializers import initSpectral
 
 
@@ -38,12 +38,12 @@ def checkAdjoint(A, At, b):
     """
     y = np.random.randn(*b.shape);
     # Aty = At(y) # Check
-    Aty = At.product(y) #At@y
+    Aty = At@y #At@y
     x = np.random.randn(*Aty.shape)
     # Ax = A(x) # check
-    Ax = A.product(x) #Ax = A@x
-    innerProduct1 = Ax.T@y
-    innerProduct2 = x.T@Aty
+    Ax = A@x #Ax = A@x
+    innerProduct1 = Ax.conjugate().T@y
+    innerProduct2 = x.conjugate().T@Aty
     error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1);
     assert error<1e-3 , 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
 
@@ -444,13 +444,12 @@ def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
     # else:
     #     A = Am
     #     At = Atm
-
+    print(Am.shape)
     if Am.shape > (0, 0):
         n = Am.shape[1]
         # Transform matrix into function form
-        At = ConvMatrix(Am.T)
+        At = ConvMatrix(Am.conjugate().T)
         A = ConvMatrix(Am)
-
     # Check that inputs are of valid datatypes and sizes
     validateInput(A, At, b0, n, opts)
     # Check that At is the adjoint/transpose of A

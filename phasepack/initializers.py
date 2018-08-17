@@ -115,15 +115,19 @@ def  initSpectral(A, At, b0, n,  isScaled=False, isTruncated=False, verbose=Fals
     # Build the function handle associated to the matrix Y
     # in the TWF paper Algorithm 1
     # Yfunc = lambda x : 1/m*At((idx.*b0.^2).*A(x))
-    Ymat = 1/m*At@((idx*b0**2)*A)
-    # Y = 1/m*At.product()
+    # YFunc = lambda x : 1/m*At@((idx*b0**2)*A@x)
+
     # Our implemention uses Matlab's built-in function eigs() to get the leading
     # eigenvector because of greater efficiency.
     # Create opts struct for eigs
     # Get the eigenvector that corresponds to the largest eigenvalue of the
     # associated matrix of Yfunc.
-    [eval, x0] = eigs(Ymat, k=1, which='LR')
+    [eval, x0] = A.yfunc_eigs(m, b0, idx)
 
+    # Implemented a function that directly finds the eigenvectors of YFunc where
+    # Yfunc = lambda x : 1/m*At((idx.*b0.^2).*A(x))
+
+    # [eval, x0] = A.yfunc_eigs(m, b0, idx)
     # This part does not appear in the paper. We add it for better
     # performance. Rescale the solution to have approximately the correct
     # magnitude

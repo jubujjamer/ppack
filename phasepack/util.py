@@ -12,7 +12,7 @@ __author__ = 'Juan M. Bujjamer'
 __all__ = ['buildTestProblem']
 
 import numpy as np
-from scipy.sparse.linalg import LinearOperator
+from scipy.sparse.linalg import LinearOperator, eigs, lsqr
 from numpy.random import multivariate_normal as mvnrnd
 
 class Options(object):
@@ -167,18 +167,63 @@ class ConvMatrix(object):
     """
     def __init__(self, A):
         self.shape = A.shape
-        matvec = lambda x: A@x
-        self.matrix = LinearOperator(A.shape, matvec)
+        self.n = self.shape[1]
+        self.m = self.shape[0]
+        self.A = A
+        def mv(v):
+            return A@v
+        def rmv(v):
+            return A.conjugate().T@v
 
-    def transpose(self):
+        def mvh(v):
+            return A.conjugate().T@v
+
+        self.matrix = LinearOperator(A.shape, matvec=mv, rmatvec=rmv)
+        self.hmatrix = LinearOperator(A.T.shape, matvec=mvh)
+
+    def hermitic(self):
         return
 
-    def lsqr(self):
+    def lsqr(self, b, tol, maxit, x0):
+        """ Solution of the least squares problem for ConvMatrix
+        Gkp, opts.tol/100, opts.maxInnerIters, gk
+        """
+        print(b.shape)
+        print(self.matrix.rmatvec(b), x0.shape)
+        x, istop, itn, r1norm = lsqr(self.matrix, b, atol=tol, btol=tol, iter_lim=maxit, x0=x0)
+        return x
+
+    def __matmul__(self, x):
+        """Implementation of left ConvMatrix multiplication, i.e. A@x"""
+        return self.matrix.dot(x)
+        # return self.matrix.matvec(x)
+
+    def __rmatmul__(self, x):
+        """Implementation of right ConvMatrix multiplication, i.e. x@A"""
         return
 
-    def product(self, x):
-        self.matrix.matvec(x)
-        return
+    def __rmul__(self, x):
+        if type(x) is float:
+            lvec = np.ones(self.shape[1])*x
+        else:
+            lvec = x
+        return x*self.A # This is not optimal
+
+    def yfunc_eigs(self, m, b0, idx):
+        """ Calculates the lowest real eigenvector of YFunc
+            1/m*At((idx.*b0.^2).*A(x)).
+        """
+        def mvy(v):
+            A = self.matrix
+            Ah = self.hmatrix
+            print((idx*b0**2*self.A@v))
+            return 1/m*self.A.conjugate().T@(idx*b0**2*self.A@v)
+        yLO = LinearOperator((self.n, self.n), matvec=mvy)
+        print(yLO.shape)
+        [eval, x0] = eigs(yLO, k=1, which='LR')
+
+        return eval, x0
+
 
     def eigs(self):
         return
@@ -220,10 +265,10 @@ def stopNow(opts, currentTime, currentResid, currentReconError):
     if currentTime >= opts.maxTime:
         return True
 
-    if opts.xt
+    if opts.xt:
         assert currentReconError, 'If xt is provided, currentReconError must be provided.'
         ifStop = currentReconError < opts.tol
-    else
+    else:
         assert currentResid, 'If xt is not provided, currentResid must be provided.'
         ifStop = currentResid < opts.tol
     return ifStop
