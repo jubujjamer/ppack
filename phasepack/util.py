@@ -195,6 +195,9 @@ class ConvMatrix(object):
         x = ret[0]
         return x
 
+    def __mul__(self, x):
+        return self.lo.matvec(x)
+
     def __matmul__(self, x):
         """Implementation of left ConvMatrix multiplication, i.e. A@x"""
         return self.matrix.dot(x)
@@ -226,6 +229,16 @@ class ConvMatrix(object):
 
     def eigs(self):
         return
+
+    def calc_yeigs(self, m, b0, idx):
+        v = idx*b0**2
+        # ymatvec = lambda x: 1/m*self.lo.rmatvec((v*self.matrix)@x)
+        ymatvec = lambda x: 1/m*self.lo.rmatvec(self.lo.matvec(x))
+        yfun = LinearOperator((self.n, self.n), matvec=ymatvec)
+        x = np.ones((5, 1))
+        # print(yfun(x))
+        [eval, x0] = eigs(yfun, k=1, which='LM')
+        return eval, x0
 
 def stopNow(opts, currentTime, currentResid, currentReconError):
     """
