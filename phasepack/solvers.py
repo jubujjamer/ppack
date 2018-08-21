@@ -156,10 +156,10 @@ def solveFienup(A, At, b0, x0, opts):
             raise Exception("%s should be a number" % opts.FienupTuning)
 #
     # Initialization
-    gk = x0;                      # Initial Guess, corresponds to g_k in the paper
-    gkp = x0;                     # corresponds to g_k' in the paper
-    gknew = x0;                   # corresponds to g_k+1 in the paper
-    beta = opts.FienupTuning;     # GS tuning parameter
+    gk = x0                      # Initial Guess, corresponds to g_k in the paper
+    gkp = x0                     # corresponds to g_k' in the paper
+    gknew = x0                   # corresponds to g_k+1 in the paper
+    beta = opts.FienupTuning     # GS tuning parameter
 #
     # Initialize values potentially computed at each round.
     currentTime = []
@@ -193,7 +193,7 @@ def solveFienup(A, At, b0, x0, opts):
         # If xt is provided, reconstruction error will be computed and used for stopping
         # condition. Otherwise, residual will be computed and used for stopping
         # condition.
-        if opts.xt:
+        if len(opts.xt) > 0:
             x = gk
             xt = opts.xt
             # Compute optimal rotation
@@ -204,7 +204,7 @@ def solveFienup(A, At, b0, x0, opts):
                 container.reconErrors[iter] = currentReconError
 
 #
-        if not opts.xt or opts.recordResiduals:
+        if not len(opts.xt) == 0 or opts.recordResiduals:
             currentResid = norm(At@(Ax-Gkp))/norm(Gkp)
 
         if opts.recordResiduals:
@@ -233,40 +233,32 @@ def solveFienup(A, At, b0, x0, opts):
         # gkp = inverse fourier transform of Gkp
         gkp = A.lsqr(Gkp, opts.tol/100, opts.maxInnerIters, gk)
         # gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.maxInnerIters,[],[],gk)
-#
-#         % If the signal is real and non-negative, Fienup updates object domain
-#         % following the constraint
-#         if opts.isComplex == false & opts.isNonNegativeOnly == true
-#
-#             inds = gkp<0;  % Get indices that are outside the non-negative constraints
-#                            % May also need to check if isreal
-#             inds2 = ~inds; % Get the complementary indices
-#
-#             % hybrid input-output (see Section V, Equation (44))
-#             gknew(inds) = gk(inds) - beta*gkp(inds);
-#             gknew(inds2) = gkp(inds2);
-#         else % Otherwise, its update is the same as the GerchBerg-Saxton algorithm
-#             gknew = gkp;
-#         end
-#         gk = gknew;               % update gk
-#
-#     end
-#
-#     sol = gk;
+
+        # If the signal is real and non-negative, Fienup updates object domain
+        # following the constraint
+        if opts.isComplex == False and opts.isNonNegativeOnly == True:
+            inds = gkp < 0  # Get indices that are outside the non-negative constraints
+                            # May also need to check if isreal
+            inds2 = not inds # Get the complementary indices
+            # hybrid input-output (see Section V, Equation (44))
+            gknew[inds] = gk[inds] - beta*gkp[inds]
+            gknew[inds2] = gkp[inds2]
+        else: # Otherwise, its update is the same as the GerchBerg-Saxton algorithm
+            gknew = gkp.reshape(-1,1)
+        gk = gknew # update gk
+        # print(gk)
+    sol = gk
 #     % Create output according to the options chosen by user
-#     outs = generateOutputs(opts, iter, solveTimes, measurementErrors, reconErrors, residuals);
-#
-#     % Display verbose output if specified
-#     if opts.verbose == 1
-#         displayVerboseOutput(iter, currentTime, currentResid, currentReconError, currentMeasurementError);
-#     end
-# end
+    container.iterationCount = iter
+    # Display verbose output if specified
+    if opts.verbose:
+        displayVerboseOutput(iter, currentTime, currentResid, currentReconError, currentMeasurementError)
 #
 #
 # % Check the validify of algorithm specific options
 
 
-    return 5, 5
+    return sol, container
 
 def solveGerchbergSaxton(A, At, b0, x0, opts):
     return
@@ -318,7 +310,7 @@ def solveX(A, At, b0, x0, opts):
                    'wirtflow': solveWirtFlow(A, At, b0, x0, opts)}
     sol, outs = chooseAlgorithm[opts.algorithm.lower()]
 
-    return sol, outs
+    return sol, outs, opts
 
 
 def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
@@ -444,7 +436,6 @@ def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
     # else:
     #     A = Am
     #     At = Atm
-    print(Am.shape)
     if Am.shape > (0, 0):
         n = Am.shape[1]
         # Transform matrix into function form
@@ -462,4 +453,5 @@ def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
     elif opts.isNonNegativeOnly:
         warnings.warn('opts.isNonNegativeOnly will not be used when the signal is complex.');
 
-    [sol, outs] = solveX(A, At, b0, x0, opts) # Solve the problem using the specified algorithm
+    [sol, outs, opts] = solveX(A, At, b0, x0, opts) # Solve the problem using the specified algorithm
+    return sol, outs, opts

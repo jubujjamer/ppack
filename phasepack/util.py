@@ -14,6 +14,7 @@ __all__ = ['buildTestProblem']
 import numpy as np
 from scipy.sparse.linalg import LinearOperator, eigs, lsqr
 from numpy.random import multivariate_normal as mvnrnd
+import matplotlib.pyplot as plt
 
 class Options(object):
     """ Option managing class.
@@ -152,6 +153,7 @@ class Container(object):
         self.measurementErrors = None
         self.reconErrors = None
         self.residuals = None
+        self.iterationCount = None
 
         if opts.recordTimes:
             self.solveTimes = np.zeros(opts.maxIters)
@@ -161,6 +163,7 @@ class Container(object):
             self.reconErrors = np.zeros(opts.maxIters)
         if opts.recordResiduals:
             self.residuals = np.zeros(opts.maxIters)
+
 
 class ConvMatrix(object):
     """ Convolution matrix container.
@@ -174,12 +177,7 @@ class ConvMatrix(object):
             return A@v
         def rmv(v):
             return A.conjugate().T@v
-
-        def mvh(v):
-            return A.conjugate().T@v
-
         self.matrix = LinearOperator(A.shape, matvec=mv, rmatvec=rmv)
-        self.hmatrix = LinearOperator(A.T.shape, matvec=mvh)
 
     def hermitic(self):
         return
@@ -188,9 +186,13 @@ class ConvMatrix(object):
         """ Solution of the least squares problem for ConvMatrix
         Gkp, opts.tol/100, opts.maxInnerIters, gk
         """
-        print(b.shape)
-        print(self.matrix.rmatvec(b), x0.shape)
-        x, istop, itn, r1norm = lsqr(self.matrix, b, atol=tol, btol=tol, iter_lim=maxit, x0=x0)
+        if b.shape[1]>0:
+            b = b.reshape(-1)
+        if x0.shape[1]>0:
+            x0 = x0.reshape(-1)
+        # x, istop, itn, r1norm = lsqr(self.matrix, b, atol=tol, btol=tol, iter_lim=maxit, x0=x0)
+        ret = lsqr(self.matrix, b, atol=tol, btol=tol, iter_lim=maxit, x0=x0)
+        x = ret[0]
         return x
 
     def __matmul__(self, x):
@@ -215,11 +217,8 @@ class ConvMatrix(object):
         """
         def mvy(v):
             A = self.matrix
-            Ah = self.hmatrix
-            print((idx*b0**2*self.A@v))
             return 1/m*self.A.conjugate().T@(idx*b0**2*self.A@v)
         yLO = LinearOperator((self.n, self.n), matvec=mvy)
-        print(yLO.shape)
         [eval, x0] = eigs(yLO, k=1, which='LR')
 
         return eval, x0
@@ -265,7 +264,7 @@ def stopNow(opts, currentTime, currentResid, currentReconError):
     if currentTime >= opts.maxTime:
         return True
 
-    if opts.xt:
+    if len(opts.xt)>0:
         assert currentReconError, 'If xt is provided, currentReconError must be provided.'
         ifStop = currentReconError < opts.tol
     else:
@@ -311,6 +310,51 @@ def  displayVerboseOutput(iter, currentTime, currentResid=None, currentReconErro
         print('currentReconError = %d' %currentReconError)
     if currentMeasurementError:
         print('MeasurementError = %d' %currentMeasurementError)
+
+def plotErrorConvergence(outs, opts):
+    """
+    This function plots some convergence curve according to the values of
+    options in opts specified by user. It is used in all the test*.m scripts.
+    Specifically,
+    If opts.recordReconErrors is true, it plots the convergence curve of
+    reconstruction error versus the number of iterations.
+    If opts.recordResiduals is true, it plots the convergence curve of
+    residuals versus the number of iterations.
+    The definition of residuals is algorithm specific. For details, see the
+    specific algorithm's solve*.m file.
+    If opts.recordMeasurementErrors is true, it plots the convergence curve
+    of measurement errors.
+
+    Inputs are as defined in the header of solvePhaseRetrieval.m.
+    See it for details.
+
+
+    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+    Christoph Studer, & Tom Goldstein
+    Copyright (c) University of Maryland, 2017
+
+    """
+
+    # Plot the error convergence curve
+    if opts.recordReconErrors:
+        plt.figure()
+        plt.semilogy(outs.reconErrors)
+        plt.xlabel('Iterations')
+        plt.ylabel('ReconErrors')
+        plt.title('Convergence curve: %s' % opts.algorithm)
+    if opts.recordResiduals:
+        plt.figure()
+        plt.semilogy(outs.residuals)
+        plt.xlabel('Iterations')
+        plt.ylabel('Residuals')
+        plt.title('Convergence curve: %s' % opts.algorithm)
+    if opts.recordMeasurementErrors:
+        plt.figure()
+        plt.semilogy(outs.measurementErrors);
+        plt.xlabel('Iterations');
+        plt.ylabel('MeasurementErros');
+        plt.title('Convergence curve: %s' % opts.algorithm)
+    plt.show()
 
 def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Gaussian'):
     """ Creates and outputs random generated data and measurements according to user's choice. It is invoked in test*.m in order to build a test problem.
