@@ -15,9 +15,9 @@ import time
 import warnings
 import numpy as np
 from numpy.linalg import norm
-from phasepack.util import Options, Container
-from phasepack.initializers import initSpectral
 
+from phasepack.util import Options, Container, ConvMatrix, stopNow
+from phasepack.initializers import initSpectral
 
 def validateInput(A, At, b0, n, opts):
 
@@ -38,10 +38,10 @@ def checkAdjoint(A, At, b):
     """
     y = np.random.randn(*b.shape);
     # Aty = At(y) # Check
-    Aty = At.product(y) #At@y
+    Aty = At*y #At@y
     x = np.random.randn(*Aty.shape)
     # Ax = A(x) # check
-    Ax = A.product(x) #Ax = A@x
+    Ax = A*x #Ax = A@x
     innerProduct1 = Ax.T@y
     innerProduct2 = x.T@Aty
     error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1);
@@ -186,7 +186,7 @@ def solveFienup(A, At, b0, x0, opts):
 #
 #         Ax = A(gk);            % Intermediate value to save repetitive computation
 #         Gkp = b0.*sign(Ax);    % Calculate the initial spectral magnitude, G_k' in the paper.
-        Ax = A@gk            # Intermediate value to save repetitive computation
+        Ax = A*gk            # Intermediate value to save repetitive computation
         Gkp = b0*np.sign(Ax)    #
         #-----------------------------------------------------------------------
         # Record convergence information and check stopping condition
@@ -205,7 +205,7 @@ def solveFienup(A, At, b0, x0, opts):
 
 #
         if not opts.xt or opts.recordResiduals:
-            currentResid = norm(At@(Ax-Gkp))/norm(Gkp)
+            currentResid = norm(At*(Ax-Gkp))/norm(Gkp)
 
         if opts.recordResiduals:
             container.residuals[iter] = currentResid
@@ -231,6 +231,7 @@ def solveFienup(A, At, b0, x0, opts):
         # gkp = inv(A)*Gkp
         # If A is a fourier transform( and measurements are not oversampled i.e. m==n),
         # gkp = inverse fourier transform of Gkp
+        print(gk.shape, Gkp.shape, A.shape)
         gkp = A.lsqr(Gkp, opts.tol/100, opts.maxInnerIters, gk)
         # gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.maxInnerIters,[],[],gk)
 #

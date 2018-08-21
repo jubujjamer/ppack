@@ -16,6 +16,8 @@ from numpy.linalg import norm
 from scipy.sparse.linalg import eigs
 from phasepack.util import Options
 
+from phasepack.util import ConvMatrix
+
 
 def  initSpectral(A, At, b0, n,  isScaled=False, isTruncated=False, verbose=False):
     """ Intializer proposed in Algorithm 1 of the Wirtinger Flow paper. This initializer forms a matrix from the data and computes the largest     eigenvector that is shown to be positively correlated with the unknown true signal. This script presents both the vanilla spectral method and the truncated spectral method. A recently proposed 'optimal' spectral initializer method was proposed and is presented in a different file.
@@ -115,22 +117,23 @@ def  initSpectral(A, At, b0, n,  isScaled=False, isTruncated=False, verbose=Fals
     # Build the function handle associated to the matrix Y
     # in the TWF paper Algorithm 1
     # Yfunc = lambda x : 1/m*At((idx.*b0.^2).*A(x))
-    Ymat = 1/m*At@((idx*b0**2)*A)
-    # Y = 1/m*At.product()
-    # Our implemention uses Matlab's built-in function eigs() to get the leading
-    # eigenvector because of greater efficiency.
-    # Create opts struct for eigs
-    # Get the eigenvector that corresponds to the largest eigenvalue of the
-    # associated matrix of Yfunc.
-    [eval, x0] = eigs(Ymat, k=1, which='LR')
+    # Ymat = 1/m*At@((idx*b0**2)*A)
+    # # Y = 1/m*At.product()
+    # # Our implemention uses Matlab's built-in function eigs() to get the leading
+    # # eigenvector because of greater efficiency.
+    # # Create opts struct for eigs
+    # # Get the eigenvector that corresponds to the largest eigenvalue of the
+    # # associated matrix of Yfunc.
+    # [eval, x0] = eigs(Ymat, k=1, which='LR')
 
+    [eval, x0] = A.calc_yeigs(m, b0, idx)
     # This part does not appear in the paper. We add it for better
     # performance. Rescale the solution to have approximately the correct
     # magnitude
     if isScaled:
         # Pick measurements according to the indices selected
         b = b0*idx
-        Ax = np.abs(A@x0)*idx
+        Ax = np.abs(A*x0)*idx
 
         # solve min_s || s|Ax| - b ||
         u = Ax*b

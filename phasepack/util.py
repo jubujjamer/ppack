@@ -12,7 +12,7 @@ __author__ = 'Juan M. Bujjamer'
 __all__ = ['buildTestProblem']
 
 import numpy as np
-from scipy.sparse.linalg import LinearOperator
+from scipy.sparse.linalg import LinearOperator, eigs, lsqr
 from numpy.random import multivariate_normal as mvnrnd
 
 class Options(object):
@@ -167,21 +167,37 @@ class ConvMatrix(object):
     """
     def __init__(self, A):
         self.shape = A.shape
+        self.m = A.shape[0]
+        self.n = A.shape[1]
+        self.matrix = A
         matvec = lambda x: A@x
-        self.matrix = LinearOperator(A.shape, matvec)
+        rmatvec = lambda x: A.conjugate().T @ x
+        self.lo = LinearOperator(A.shape, matvec, rmatvec)
 
     def transpose(self):
         return
 
-    def lsqr(self):
-        return
+    def lsqr(self, b, tol, maxiters, x0):
+        self.lo.rmatvec(np.ones((50,1)))
+        x, istop, itn, r1norm = lsqr(self.lo, b=b, atol=tol, btol=tol,
+                                    iter_lim=maxiters, x0=x0)
+        return x
 
-    def product(self, x):
-        self.matrix.matvec(x)
-        return
+    def __mul__(self, x):
+        return self.lo.matvec(x)
 
     def eigs(self):
         return
+
+    def calc_yeigs(self, m, b0, idx):
+        v = idx*b0**2
+        # ymatvec = lambda x: 1/m*self.lo.rmatvec((v*self.matrix)@x)
+        ymatvec = lambda x: 1/m*self.lo.rmatvec(self.lo.matvec(x))
+        yfun = LinearOperator((self.n, self.n), matvec=ymatvec)
+        x = np.ones((5, 1))
+        # print(yfun(x))
+        [eval, x0] = eigs(yfun, k=1, which='LM')
+        return eval, x0
 
 def stopNow(opts, currentTime, currentResid, currentReconError):
     """
@@ -220,10 +236,10 @@ def stopNow(opts, currentTime, currentResid, currentReconError):
     if currentTime >= opts.maxTime:
         return True
 
-    if opts.xt
+    if opts.xt:
         assert currentReconError, 'If xt is provided, currentReconError must be provided.'
         ifStop = currentReconError < opts.tol
-    else
+    else:
         assert currentResid, 'If xt is not provided, currentResid must be provided.'
         ifStop = currentResid < opts.tol
     return ifStop
