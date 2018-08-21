@@ -174,8 +174,11 @@ class ConvMatrix(object):
         rmatvec = lambda x: A.conjugate().T @ x
         self.lo = LinearOperator(A.shape, matvec, rmatvec)
 
-    def transpose(self):
-        return
+        def mvh(v):
+            return A.conjugate().T@v
+
+        self.matrix = LinearOperator(A.shape, matvec=mv, rmatvec=rmv)
+        self.hmatrix = LinearOperator(A.T.shape, matvec=mvh)
 
     def lsqr(self, b, tol, maxiters, x0):
         self.lo.rmatvec(np.ones((50,1)))
@@ -185,6 +188,38 @@ class ConvMatrix(object):
 
     def __mul__(self, x):
         return self.lo.matvec(x)
+
+    def __matmul__(self, x):
+        """Implementation of left ConvMatrix multiplication, i.e. A@x"""
+        return self.matrix.dot(x)
+        # return self.matrix.matvec(x)
+
+    def __rmatmul__(self, x):
+        """Implementation of right ConvMatrix multiplication, i.e. x@A"""
+        return
+
+    def __rmul__(self, x):
+        if type(x) is float:
+            lvec = np.ones(self.shape[1])*x
+        else:
+            lvec = x
+        return x*self.A # This is not optimal
+
+    def yfunc_eigs(self, m, b0, idx):
+        """ Calculates the lowest real eigenvector of YFunc
+            1/m*At((idx.*b0.^2).*A(x)).
+        """
+        def mvy(v):
+            A = self.matrix
+            Ah = self.hmatrix
+            print((idx*b0**2*self.A@v))
+            return 1/m*self.A.conjugate().T@(idx*b0**2*self.A@v)
+        yLO = LinearOperator((self.n, self.n), matvec=mvy)
+        print(yLO.shape)
+        [eval, x0] = eigs(yLO, k=1, which='LR')
+
+        return eval, x0
+
 
     def eigs(self):
         return

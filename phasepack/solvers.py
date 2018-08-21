@@ -445,13 +445,12 @@ def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
     # else:
     #     A = Am
     #     At = Atm
-
+    print(Am.shape)
     if Am.shape > (0, 0):
         n = Am.shape[1]
         # Transform matrix into function form
-        At = ConvMatrix(Am.T)
+        At = ConvMatrix(Am.conjugate().T)
         A = ConvMatrix(Am)
-
     # Check that inputs are of valid datatypes and sizes
     validateInput(A, At, b0, n, opts)
     # Check that At is the adjoint/transpose of A
