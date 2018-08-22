@@ -16,14 +16,11 @@ import warnings
 import numpy as np
 from numpy.linalg import norm
 
-from phasepack.util import Options, Container, ConvMatrix, stopNow
-from phasepack.initializers import initSpectral
+from phasepack.util import Options, Container, ConvMatrix, stopNow, displayVerboseOutput
+from phasepack.initializers import initSpectral, initOptimalSpectral
 
-def validateInput(A, At, b0, n, opts):
-
+def validateInput(A, b0, n, opts, At=None):
     assert n>0, 'n must be positive'
-    if not type(A) == np.ndarray and At == None:
-        raise Exception('If A is a function handle, then At and n must be provided')
 
     assert (np.abs(b0) == b0).all, 'b must be real-valued and non-negative'
 
@@ -33,7 +30,7 @@ def validateInput(A, At, b0, n, opts):
     if opts.customx0:
         assert np.shape(opts.customx0) == (n, 1), 'customx0 must be a column vector of length n'
 
-def checkAdjoint(A, At, b):
+def checkAdjoint(A, b, At=None):
     """ Check that A and At are indeed ajoints of one another
     """
     y = np.random.randn(*b.shape);
@@ -42,15 +39,23 @@ def checkAdjoint(A, At, b):
     x = np.random.randn(*Aty.shape)
     # Ax = A(x) # check
     Ax = A*x #Ax = A@x
-    innerProduct1 = Ax.T@y
-    innerProduct2 = x.T@Aty
-    error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1);
-    assert error<1e-3 , 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
+    innerProduct1 = Ax.conjugate().T@y
+    innerProduct2 = x.conjugate().T@Aty
+    error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1)
 
-def initX(A, At, b0, n, opts):
-    initMethods = {'truncatedspectral': initSpectral(A, At, b0, n, True, True, opts.verbose),
-                    'truncated': initSpectral(A, At, b0, n, True, True, opts.verbose),
-                    'spectral': initSpectral(A, At, b0, n, False, True, opts.verbose)}
+    assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
+
+def initX(A, b0, n, opts, At=None):
+    initMethods = {'truncatedspectral': initSpectral(A=A, At=At, b0=b0, n=n,
+                                        isTruncated=True, isScaled=True, verbose=opts.verbose),
+                    'truncated': initSpectral(A=A, At=At, b0=b0, n=n,
+                                        isTruncated=True, isScaled=True, verbose=opts.verbose),
+                    'spectral': initSpectral(A=A, At=At, b0=b0, n=n,
+                                        isTruncated=False, isScaled=True, verbose=opts.verbose),
+                    'optimal':  initOptimalSpectral(A=A, At=At, b0=b0, n=n,
+                                        isScaled=True, verbose=opts.verbose),
+                    'optimalspectral':  initOptimalSpectral(A=A, At=At, b0=b0, n=n,
+                                        isScaled=True, verbose=opts.verbose)}
     x0 = initMethods[opts.initMethod.lower()]
     #
     # case {'amplitudespectral','amplitude'}
@@ -59,8 +64,7 @@ def initX(A, At, b0, n, opts):
     #     x0 = initWeighted(A,At,b0,n,opts.verbose);
     # case {'orthogonalspectral','orthogonal'}
     #     x0 = initOrthogonal(A,At,b0,n,opts.verbose);
-    # case {'optimal','optimalspectral'}
-    #     x0 = initOptimalSpectral(A,At,b0,n,true,opts.verbose);
+
     # case 'angle'
     #     assert(isfield(opts,'xt'),'The true solution, opts.xt, must be specified to use the angle initializer.')
     #     assert(isfield(opts,'initAngle'),'An angle, opts.initAngle, must be specified (in radians) to use the angle initializer.')
@@ -143,9 +147,9 @@ def solveFienup(A, At, b0, x0, opts):
    Authors:       J. R. Fienup
    Address: https://www.osapublishing.org/ao/abstract.cfm?uri=ao-21-15-2758
 
-  PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-  Christoph Studer, & Tom Goldstein
-  Copyright (c) University of Maryland, 2017
+   PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+   Christoph Studer, & Tom Goldstein
+   Copyright (c) University of Maryland, 2017
 
     """
 
@@ -187,7 +191,7 @@ def solveFienup(A, At, b0, x0, opts):
 #         Ax = A(gk);            % Intermediate value to save repetitive computation
 #         Gkp = b0.*sign(Ax);    % Calculate the initial spectral magnitude, G_k' in the paper.
         Ax = A*gk            # Intermediate value to save repetitive computation
-        Gkp = b0*np.sign(Ax)    #
+        Gkp = b0*Ax/np.abs(Ax)
         #-----------------------------------------------------------------------
         # Record convergence information and check stopping condition
         # If xt is provided, reconstruction error will be computed and used for stopping
@@ -201,22 +205,21 @@ def solveFienup(A, At, b0, x0, opts):
             x = alpha*x
             currentReconError = norm(x-xt)/norm(xt);
             if opts.recordReconErrors:
-                container.reconErrors[iter] = currentReconError
+                container.appendReconError(currentReconError)
 
-#
         if not len(opts.xt) == 0 or opts.recordResiduals:
-            currentResid = norm(At@(Ax-Gkp))/norm(Gkp)
+            currentResid = norm(A.hmul((Ax-Gkp)))/norm(Gkp)
 
         if opts.recordResiduals:
-            container.residuals[iter] = currentResid
+            container.appendResidual(currentResid)
 
         currentTime = time.time()-startTime  #Record elapsed time so far
         if opts.recordTimes:
-            container.solveTimes[iter] = currentTime;
+            container.appendRecordTime(currentTime)
 
         if opts.recordMeasurementErrors:
-            currentMeasurementError = norm(np.abs(A@gk)-b0)/norm(b0)
-            container.measurementErrors[iter] = currentMeasurementError
+            currentMeasurementError = norm(np.abs(A*gk)-b0)/norm(b0)
+            container.appendMeasurementError(currentMeasurementError)
 #
         # Display verbose output if specified
         if opts.verbose == 2:
@@ -231,13 +234,12 @@ def solveFienup(A, At, b0, x0, opts):
         # gkp = inv(A)*Gkp
         # If A is a fourier transform( and measurements are not oversampled i.e. m==n),
         # gkp = inverse fourier transform of Gkp
-        print(gk.shape, Gkp.shape, A.shape)
         gkp = A.lsqr(Gkp, opts.tol/100, opts.maxInnerIters, gk)
         # gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.maxInnerIters,[],[],gk)
 
         # If the signal is real and non-negative, Fienup updates object domain
         # following the constraint
-        if opts.isComplex == False and opts.isNonNegativeOnly == True:
+        if not opts.isComplex and opts.isNonNegativeOnly:
             inds = gkp < 0  # Get indices that are outside the non-negative constraints
                             # May also need to check if isreal
             inds2 = not inds # Get the complementary indices
@@ -314,7 +316,7 @@ def solveX(A, At, b0, x0, opts):
     return sol, outs, opts
 
 
-def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
+def solvePhaseRetrieval(A, b0, n,  At=None, opts=None):
     """ This method solves the problem:
                           Find x given b0 = |Ax+epsilon|
      Where A is a m by n complex matrix, x is a n by 1 complex vector, b0 is a m by 1 real,non-negative vector and epsilon is a m by 1 vector. The user supplies function handles A, At and measurement b0. Note: The unknown signal to be recovered must be 1D for our interface.
@@ -425,7 +427,7 @@ def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
 
     # If opts is not provided, create it
     if opts is None:
-        opts = Options();
+        opts = Options()
 
     # If A is a matrix, infer n and At from A
     # print(A.shape >(100, 0))
@@ -437,22 +439,24 @@ def solvePhaseRetrieval(Am, Atm, b0, n, opts=None):
     # else:
     #     A = Am
     #     At = Atm
-    if Am.shape > (0, 0):
-        n = Am.shape[1]
+    if type(A) == np.ndarray:
+        # n = Am.shape[1]
         # Transform matrix into function form
-        At = ConvMatrix(Am.conjugate().T)
-        A = ConvMatrix(Am)
+        At = ConvMatrix(A.conjugate().T)
+        A = ConvMatrix(A)
+
     # Check that inputs are of valid datatypes and sizes
-    validateInput(A, At, b0, n, opts)
+    validateInput(A=A, b0=b0, n=n, opts=opts)
     # Check that At is the adjoint/transpose of A
-    checkAdjoint(A, At, b0)
+    if At is not None:
+        checkAdjoint(A=A, b=b0, At=At)
     # Initialize x0
-    x0 = initX(A, At, b0, n, opts)
+    x0 = initX(A=A, b0=b0, n=n, opts=opts)
     # % Truncate imaginary components of x0 if working with real values
     if not opts.isComplex:
         x0 = np.real(x0)
     elif opts.isNonNegativeOnly:
         warnings.warn('opts.isNonNegativeOnly will not be used when the signal is complex.');
 
-    [sol, outs, opts] = solveX(A, At, b0, x0, opts) # Solve the problem using the specified algorithm
+    [sol, outs, opts] = solveX(A=A, At=None, b0=b0, x0=x0, opts=opts) # Solve the problem using the specified algorithm
     return sol, outs, opts

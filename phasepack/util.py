@@ -26,7 +26,7 @@ class Options(object):
                           'initMethod': 'optimal',
                           'isComplex': True,
                           'isNonNegativeOnly': False,
-                          'maxIters':1E4,
+                          'maxIters':10000,
                           'maxTime':300, # The maximum time the solver can run (unit: second). Note: since elapsed time will be checked at the end of each iteration,the real time the solver takes is the time of the iteration it goes beyond this maxTime.
                           'tol': 1E-4,
                           'verbose': 0, # Choose from [0, 1, 2]. If 0, print out nothing. If 1, print out status information in the end. If 2, print print out status information every round.
@@ -156,14 +156,25 @@ class Container(object):
         self.iterationCount = None
 
         if opts.recordTimes:
-            self.solveTimes = np.zeros(opts.maxIters)
+            self.solveTimes = np.zeros([])
         if opts.recordMeasurementErrors:
-            self.measurementErrors = np.zeros(opts.maxIters)
+            self.measurementErrors = np.zeros([])
         if opts.recordReconErrors:
-            self.reconErrors = np.zeros(opts.maxIters)
+            self.reconErrors = np.zeros([])
         if opts.recordResiduals:
-            self.residuals = np.zeros(opts.maxIters)
+            self.residuals = np.zeros([])
 
+    def appendRecordTime(self, recordTime):
+        self.solveTimes = np.append(self.solveTimes, recordTime)
+
+    def appendMeasurementError(self, measurementError):
+        self.measurementErrors = np.append(self.measurementErrors, measurementError)
+
+    def appendReconError(self, reconError):
+        self.reconErrors = np.append(self.reconErrors, reconError)
+
+    def appendResidual(self, residual):
+        self.residuals = np.append(self.residuals, residual)
 
 class ConvMatrix(object):
     """ Convolution matrix container.
@@ -195,8 +206,14 @@ class ConvMatrix(object):
         x = ret[0]
         return x
 
+    def hmul(self, x):
+        """ Hermitic mutliplication
+        returns At*x
+        """
+        return self.matrix.rmatvec(x)
+
     def __mul__(self, x):
-        return self.lo.matvec(x)
+        return self.matrix.matvec(x)
 
     def __matmul__(self, x):
         """Implementation of left ConvMatrix multiplication, i.e. A@x"""
@@ -214,30 +231,14 @@ class ConvMatrix(object):
             lvec = x
         return x*self.A # This is not optimal
 
-    def yfunc_eigs(self, m, b0, idx):
-        """ Calculates the lowest real eigenvector of YFunc
-            1/m*At((idx.*b0.^2).*A(x)).
-        """
-        def mvy(v):
-            A = self.matrix
-            return 1/m*self.A.conjugate().T@(idx*b0**2*self.A@v)
-        yLO = LinearOperator((self.n, self.n), matvec=mvy)
-        [eval, x0] = eigs(yLO, k=1, which='LR')
-
-        return eval, x0
-
-
-    def eigs(self):
-        return
-
     def calc_yeigs(self, m, b0, idx):
         v = idx*b0**2
-        # ymatvec = lambda x: 1/m*self.lo.rmatvec((v*self.matrix)@x)
-        ymatvec = lambda x: 1/m*self.lo.rmatvec(self.lo.matvec(x))
+        ymatvec = lambda x: 1/m*self.matrix.rmatvec(v*self.A@x)
+        # ymatvec = lambda x: 1/m*self.matrix.rmatvec(self.matrix.matvec(x))
         yfun = LinearOperator((self.n, self.n), matvec=ymatvec)
-        x = np.ones((5, 1))
-        # print(yfun(x))
-        [eval, x0] = eigs(yfun, k=1, which='LM')
+        [eval, x0] = eigs(yfun, k=1, which='LR')
+        print(x0)
+        print(eval)
         return eval, x0
 
 def stopNow(opts, currentTime, currentResid, currentReconError):
@@ -318,11 +319,11 @@ def  displayVerboseOutput(iter, currentTime, currentResid=None, currentReconErro
     print('Iteration = %d' % iter)
     print('IterationTime = %f' % currentTime)
     if currentResid:
-        print('Residual = %d' % currentResid)
+        print('Residual = %.1e' % currentResid)
     if currentReconError:
-        print('currentReconError = %d' %currentReconError)
+        print('currentReconError = %.3f' %currentReconError)
     if currentMeasurementError:
-        print('MeasurementError = %d' %currentMeasurementError)
+        print('MeasurementError = %.1e' %currentMeasurementError)
 
 def plotErrorConvergence(outs, opts):
     """
@@ -369,36 +370,45 @@ def plotErrorConvergence(outs, opts):
         plt.title('Convergence curve: %s' % opts.algorithm)
     plt.show()
 
+def plotRecoveredVSOriginal(x,xt):
+    """Plots the real part of the recovered signal against
+    the real part of the original signal.
+    It is used in all the test*.m scripts.
+
+    Inputs:
+          x:  a n x 1 vector. Recovered signal.
+          xt: a n x 1 vector. Original signal.
+    """
+    plt.figure()
+    plt.scatter(np.real(x), np.real(xt))
+    plt.plot([-3, 3], [-3, 3], 'r')
+    plt.title('Visual Correlation of Recovered signal with True Signal')
+    plt.xlabel('Recovered Signal')
+    plt.ylabel('True Signal')
+    plt.show()
+
 def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Gaussian'):
-    """ Creates and outputs random generated data and measurements according to user's choice. It is invoked in test*.m in order to build a test problem.
+    """ Creates and outputs random generated data and measurements according to user's choice.
 
     Inputs:
       m(integer): number of measurements.
       n(integer): length of the unknown signal.
-      isComplex(boolean, default=true): whether the signal and measurement
-        matrix is complex. isNonNegativeOnly(boolean, default=false): whether
-        the signal is real and non-negative.
-      dataType(string, default='gaussian'): it currently supports
-        ['gaussian', 'fourier'].
+      isComplex(boolean, default=true): whether the signal and measurement matrix is complex. isNonNegativeOnly(boolean, default=false): whether the signal is real and non-negative.
+      dataType(string, default='gaussian'): it currently supports ['gaussian', 'fourier'].
 
     Outputs:
       A: m x n measurement matrix/function handle.
       xt: n x 1 vector, true signal.
       b0: m x 1 vector, measurements.
       At: A n x m matrix/function handle that is the transpose of A.
-
-
-    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-    Christoph Studer, & Tom Goldstein
-    Copyright (c) University of Maryland, 2017
     """
     if dataType.lower() == 'gaussian':
-        mvnrnd(np.zeros(n), np.eye(n)/2, m)
+        # mvnrnd(np.zeros(n), np.eye(n)/2, m)
         A = mvnrnd(np.zeros(n), np.eye(n)/2, m) + isComplex*1j*mvnrnd(np.zeros(n), np.eye(n)/2, m)
-        At = A.T;
+        At = A.conjugate().T
         x = mvnrnd(np.zeros(n), np.eye(n)/2) + isComplex*1j*mvnrnd(np.zeros(n), np.eye(n)/2)
         xt = x.reshape((-1, 1))
-        b0 = np.abs(A@xt);
+        b0 = np.abs(A@xt)
 
     # elif dataType.lower() is 'fourier':
     # """Define the Fourier measurement operator.
