@@ -46,17 +46,26 @@ def checkAdjoint(A, b, At=None):
     assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
 
 def initX(A, b0, n, opts, At=None):
-    initMethods = {'truncatedspectral': initSpectral(A=A, At=At, b0=b0, n=n,
-                                        isTruncated=True, isScaled=True, verbose=opts.verbose),
-                    'truncated': initSpectral(A=A, At=At, b0=b0, n=n,
-                                        isTruncated=True, isScaled=True, verbose=opts.verbose),
-                    'spectral': initSpectral(A=A, At=At, b0=b0, n=n,
-                                        isTruncated=False, isScaled=True, verbose=opts.verbose),
-                    'optimal':  initOptimalSpectral(A=A, At=At, b0=b0, n=n,
-                                        isScaled=True, verbose=opts.verbose),
-                    'optimalspectral':  initOptimalSpectral(A=A, At=At, b0=b0, n=n,
-                                        isScaled=True, verbose=opts.verbose)}
-    x0 = initMethods[opts.initMethod.lower()]
+    # initMethods = {'truncatedspectral': initSpectral(A=A, At=At, b0=b0, n=n,
+    #                                     isTruncated=True, isScaled=True, verbose=opts.verbose),
+    #                 'truncated': initSpectral(A=A, At=At, b0=b0, n=n,
+    #                                     isTruncated=True, isScaled=True, verbose=opts.verbose),
+    #                 'spectral': initSpectral(A=A, At=At, b0=b0, n=n,
+    #                                     isTruncated=False, isScaled=True, verbose=opts.verbose),
+    #                 'optimal':  initOptimalSpectral(A=A, At=At, b0=b0, n=n,
+    #                                     isScaled=True, verbose=opts.verbose),
+    #                 'optimalspectral':  initOptimalSpectral(A=A, At=At, b0=b0, n=n,
+    #                                     isScaled=True, verbose=opts.verbose)}
+    # x0 = initMethods[opts.initMethod.lower()]
+    chosen_opt = opts.initMethod.lower()
+    if chosen_opt == 'truncatedspectral' or chosen_opt == 'truncated':
+        return initSpectral(A=A, At=At, b0=b0, n=n, isTruncated=True, isScaled=True, verbose=opts.verbose)
+    elif chosen_opt == 'spectral':
+        return initSpectral(A=A, At=At, b0=b0, n=n, isTruncated=False, isScaled=True, verbose=opts.verbose)
+    elif chosen_opt == 'optimal' or chosen_opt == 'optimalspectral':
+            return initOptimalSpectral(A=A, At=At, b0=b0, n=n, isScaled=True, verbose=opts.verbose)
+    else:
+        raise Exception('Unknown initialization option.')
     #
     # case {'amplitudespectral','amplitude'}
     #     x0 = initAmplitude(A,At,b0,n,opts.verbose);
@@ -429,28 +438,18 @@ def solvePhaseRetrieval(A, b0, n,  At=None, opts=None):
     if opts is None:
         opts = Options()
 
-    # If A is a matrix, infer n and At from A
-    # print(A.shape >(100, 0))
-    # if Am.shape > (0, 0):
-    #     n = Am.shape[1]
-    #     # Transform matrix into function form
-    #     At = lambda x: Am.T@x
-    #     A = lambda x: Am@x
-    # else:
-    #     A = Am
-    #     At = Atm
     if type(A) == np.ndarray:
         # n = Am.shape[1]
         # Transform matrix into function form
-        At = ConvMatrix(A.conjugate().T)
+        # At = ConvMatrix(A.conjugate().T)
         A = ConvMatrix(A)
 
     # Check that inputs are of valid datatypes and sizes
     validateInput(A=A, b0=b0, n=n, opts=opts)
     # Check that At is the adjoint/transpose of A
-    if At is not None:
-        checkAdjoint(A=A, b=b0, At=At)
-    # Initialize x0
+    # if At is not None:
+    #     checkAdjoint(A=A, b=b0, At=At)
+    # # Initialize x0
     x0 = initX(A=A, b0=b0, n=n, opts=opts)
     # % Truncate imaginary components of x0 if working with real values
     if not opts.isComplex:

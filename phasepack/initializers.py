@@ -88,7 +88,6 @@ def  initSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, verbose=
     #     A = lambda x: Am@x
 
     m = b0.size  # number of measurements
-
     if verbose:
         print('Estimating signal of length %d using a spectral initializer with %d measurements...' % (n, m))
 
@@ -123,7 +122,6 @@ def  initSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, verbose=
         # Pick measurements according to the indices selected
         b = b0*idx
         Ax = np.abs(A*x0)*idx
-
         # solve min_s || s|Ax| - b ||
         u = Ax*b
         l = Ax*Ax
@@ -229,7 +227,6 @@ def initOptimalSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, ve
     ymean = np.mean(y)
     y = y/ymean
 
-
     # Apply pre-processing function
     yplus = np.maximum(y, 0) # Element-wise max
     T = (yplus-1)/(yplus+np.sqrt(delta)-1)  # Formula from equation 25 in paper
@@ -248,13 +245,11 @@ def initOptimalSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, ve
         # Pick measurements according to the indices selected
         b = b0
         Ax = np.abs(A*x0)
-
         # solve min_s || s|Ax| - b ||
         u = Ax*b
         l = Ax*Ax
         s = norm(u)/norm(l)
         x0 = x0*s  # Rescale the estimation of x
-
     if verbose:
         print('Initialization finished.')
 

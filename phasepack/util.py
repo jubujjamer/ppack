@@ -179,17 +179,43 @@ class Container(object):
 class ConvMatrix(object):
     """ Convolution matrix container.
     """
-    def __init__(self, A):
-        self.shape = A.shape
-        self.n = self.shape[1]
-        self.m = self.shape[0]
+    def __init__(self, A=None, mv=None, rmv=None, shape=None):
         self.A = A
-        def mv(v):
-            return A@v
-        def rmv(v):
-            return A.conjugate().T@v
-        self.matrix = LinearOperator(A.shape, matvec=mv, rmatvec=rmv)
+        if A is not None:
+            self.shape = A.shape
+            def mv(v):
+                return A@v
+            def rmv(v):
+                return A.conjugate().T@v
+        elif any([mv, rmv]):
+            if shape:
+                self.shape = shape
+            else:
+                raise Exception('If A is not given, its shape must be provided.')
+            if not callable(mv):
+                raise Exception('Input mv was not a function. Both mv and rmv shoud be functions, or both empty.')
+            elif not callable(rmv):
+                raise Exception('Input rmv was not a function. Both mv and rmv shoud be functions, or both empty.')
+        else:
+            # One of both inputs are needed for ConvMatrix creation
+            raise Exception('A was not an ndarray, and both multiplication functions A(x) and At(x) were not provided.')
+        self.m = self.shape[0]
+        self.n = self.shape[1]
+        self.matrix = LinearOperator(self.shape, matvec=mv, rmatvec=rmv)
+        self.checkAdjoint()
 
+    def checkAdjoint(self):
+        """ Check that A and At are indeed ajoints of one another
+        """
+        y = np.random.randn(self.m);
+        Aty = self.matrix.rmatvec(y)
+        x = np.random.randn(self.n)
+        Ax = self.matrix.matvec(x)
+        innerProduct1 = Ax.conjugate().T@y
+        innerProduct2 = x.conjugate().T@Aty
+        error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1)
+        assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
+        print('Both matrices were adjoints', error)
     def hermitic(self):
         return
 
@@ -202,7 +228,7 @@ class ConvMatrix(object):
         if x0.shape[1]>0:
             x0 = x0.reshape(-1)
         # x, istop, itn, r1norm = lsqr(self.matrix, b, atol=tol, btol=tol, iter_lim=maxit, x0=x0)
-        ret = lsqr(self.matrix, b, atol=tol, btol=tol, iter_lim=maxit, x0=x0)
+        ret = lsqr(self.matrix, b, atol=tol/100, btol=tol/100, iter_lim=maxit, x0=x0)
         x = ret[0]
         return x
 
@@ -232,13 +258,12 @@ class ConvMatrix(object):
         return x*self.A # This is not optimal
 
     def calc_yeigs(self, m, b0, idx):
-        v = idx*b0**2
-        ymatvec = lambda x: 1/m*self.matrix.rmatvec(v*self.A@x)
+        v = (idx*b0**2).reshape(-1)
+        def ymatvec(x):
+            return 1/m*self.matrix.rmatvec(v*self.matrix.matvec(x))
         # ymatvec = lambda x: 1/m*self.matrix.rmatvec(self.matrix.matvec(x))
         yfun = LinearOperator((self.n, self.n), matvec=ymatvec)
         [eval, x0] = eigs(yfun, k=1, which='LR')
-        print(x0)
-        print(eval)
         return eval, x0
 
 def stopNow(opts, currentTime, currentResid, currentReconError):
@@ -277,7 +302,6 @@ def stopNow(opts, currentTime, currentResid, currentReconError):
     """
     if currentTime >= opts.maxTime:
         return True
-
     if len(opts.xt)>0:
         assert currentReconError, 'If xt is provided, currentReconError must be provided.'
         ifStop = currentReconError < opts.tol
@@ -316,14 +340,15 @@ def  displayVerboseOutput(iter, currentTime, currentResid=None, currentReconErro
     Christoph Studer, & Tom Goldstein
     Copyright (c) University of Maryland, 2017
     """
-    print('Iteration = %d' % iter)
-    print('IterationTime = %f' % currentTime)
+    print('Iteration = %d' % iter, end=' |')
+    print('IterationTime = %f' % currentTime, end=' |')
     if currentResid:
-        print('Residual = %.1e' % currentResid)
+        print('Residual = %.1e' % currentResid, end=' |')
     if currentReconError:
-        print('currentReconError = %.3f' %currentReconError)
+        print('currentReconError = %.3f' %currentReconError, end=' |')
     if currentMeasurementError:
-        print('MeasurementError = %.1e' %currentMeasurementError)
+        print('MeasurementError = %.1e' %currentMeasurementError, end=' |')
+    print()
 
 def plotErrorConvergence(outs, opts):
     """

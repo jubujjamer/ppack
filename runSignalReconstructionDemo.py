@@ -1,7 +1,7 @@
 #  runSignalReconstructionDemo.py
 #
 # This script will create phaseless measurements from a 1d test signal, and
-# then recover the image using phase retrieval methods.  We now describe
+# then recover the signal using phase retrieval methods.  We now describe
 # the details of the simple recovery problem that this script implements.
 #
 #                         Recovery Problem
@@ -74,6 +74,7 @@ x = x*rotation
 print('Signal recovery required %d iterations (%f secs)\n' % (outs.iterationCount, outs.solveTimes[-1]))
 
 # Plot the true vs recovered signal.  Ideally, this scatter plot should be clustered around the 45-degree line.
+
 fig, axes = plt.subplots(1,2)
 axes[0].scatter(np.real(x_true), np.real(x))
 axes[0].set_xlabel('Original signal value')
@@ -86,4 +87,7 @@ axes[1].set_xlabel('Time (sec)')
 axes[1].set_ylabel('Error')
 axes[1].set_title('Convergence Curve');
 # set(gcf,'units','points','position',[0,0,1200,300]);
+plt.figure()
+plt.plot(np.real(x_true))
+plt.plot(np.real(x))
 plt.show()
