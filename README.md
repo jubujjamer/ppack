@@ -1,8 +1,8 @@
-# phasepack-python
+# Phasepack implementation for Python
 
 This is a complete revisited implementation of the Phasepack library, which was originallly written in MATLAB (check it out in https://www.cs.umd.edu/~tomg/projects/phasepack/) primarily to benchmark a very complete set of state of the art phase retrieval algorithms.
 
-# Who created Phasepack?
+## Who created Phasepack?
 
 Rohan Chandra - University of Maryland 
 Ziyuan Zhong - Columbia University 
