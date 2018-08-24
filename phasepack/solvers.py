@@ -371,10 +371,22 @@ def solveTWF(A, At, b0, x0, opts):
     gdOpts = gdOptions(opts)
 
 
-    def updateObjective(a, b):
-        r1 = lambda x: x*x
-        r2 = lambda x: x*5
-        return r1, r2
+    def updateObjective(x, Ax):
+        y = b0**2 # The TWF formulation uses y as the measurements rather than b0
+        m = y.size # number of Measurements
+        Kt = 1/m*norm(y-np.abs(Ax)**2, ord=1);   # 1/m * sum(|y-|a'z|^2|)
+        # Truncation rules
+        # Unlike what specified in the TWF paper Algorithm1, the
+        # term sqrt(n)/abs(x) does not appear in the following equations
+        Eub =  np.abs(Ax)/norm(x) <= opts.alpha_ub
+        Elb =  np.abs(Ax)/norm(x) >= opts.alpha_lb
+        Eh  =  np.abs(y-np.abs(Ax)**2) <= opts.alpha_h*Kt*np.abs(Ax)/norm(x)
+        mask = Eub*Elb*Eh
+        s = np.sum(mask)
+        f = lambda z: (0.5/s)*np.sum(mask*(np.abs(z)**2-y*np.log(np.abs(z)**2) ) )
+        gradf = lambda z: (1.0/s)*mask*(np.abs(z)**2-y)/z.conjugate()
+        return f, gradf
+
     sol, outs = gradientDescentSolver(A, At, x0, b0, updateObjective, gdOpts)
 
 

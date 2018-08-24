@@ -64,15 +64,99 @@ class gdOptions(object):
             self.ncgResetPeriod = 100
 
 
-def determineSearchDirection():
-    return np.array([5, 4])
+def determineSearchDirection(opts, gradf1, iter, lastNcgResetIter, unscaledSearchDir,
+                             lastObjectiveUpdateIter, rhoVals, sVals, yVals, Dg):
+    """
+        Determine search direction for next iteration based on specified search
+        method
+    """
+    if opts.searchMethod.lower() == 'steepestdescent':
+        searchDir = -gradf1
+    elif opts.searchMethod.lower() == 'ncg':
+        searchDir = -gradf1
+        # Reset NCG progress after specified number of iterations have
+        # passed
+        if iter - lastNcgResetIter == opts.ncgResetPeriod:
+            unscaledSearchDir = zeros(n)
+            lastNcgResetIter = iter
+        # Proceed only if reset has not just occurred
+        if iter != lastNcgResetIter:
+            if opts.betaChoice.lower() == 'hs':
+                # Hestenes-Stiefel
+                beta = -np.real(gradf1.congujate().T*Dg)/np.real(unscaledSearchDir.congujate().T*Dg)
+            elif opts.betaChoice.lower() == 'fr':
+                # Fletcher-Reeves
+                beta = norm(gradf1)**2 / norm(gradf0)^2;
+            elif opts.betaChoice.lower == 'pr':
+                #Polak-Ribiere
+                beta = np.real(gradf1.conjugate().T*Dg)/norm(gradf0)**2
+            elif opts.betaChoice.lower ==  'dy':
+                # Dai-Yuan
+                beta = norm(gradf1)**2 / np.real(unscaledSearchDir.conjugate().T*Dg)
+
+            searchDir = searchDir + beta * unscaledSearchDir;
+        unscaledSearchDir = searchDir
+    elif opts.searchMethod.lower() == 'lbfgs':
+        searchDir = -gradf1
+        iters = np.min(iter-lastObjectiveUpdateIter, opts.storedVectors);
+        if iters > 0:
+            alphas = np.zeros(iters)
+            # First loop
+            for j in range(iters):
+                alphas[j] = rhoVals[j]*np.real(sVals[:,j].conjugate().T*searchDir)
+                searchDir = searchDir - alphas[j] * yVals[:,j]
+
+            # Scaling of search direction
+            gamma = np.real(Dg.conjugate().T*Dx)/(Dg.conjugate().T*Dg)
+            searchDir = gamma*searchDir
+
+            # Second loop
+            for j in range(iters, 1, -1):
+                beta = rhoVals[j]*np.real(yVals[:,j].congugate().T*searchDir)
+                searchDir = searchDir + (alphas[j]-beta)*sVals[:,j]
+
+            searchDir = 1/gamma*searchDir
+            searchDir = norm(gradf1)/norm(searchDir)*searchDir
+
+    # Change search direction to steepest descent direction if current
+    # direction is invalid
+    if any(np.isnan(searchDir)) or any(np.isinf(searchDir)):
+        searchDir = -gradf1
+    # Scale current search direction match magnitude of gradient
+    searchDir = norm(gradf1) / norm(searchDir)*searchDir
+
+    return searchDir
 
 
-def determineInitialStepsize():
-    return 5
+def determineInitialStepsize(A, x0):
+    """ Determine reasonable initial stepsize of current objective function
+        (adapted from FASTA.m)
+    """
+    x_1 = randn(size(x0))
+    x_2 = randn(size(x0))
+    gradf_1 = A.hmul(gradf(A(x_1)))
+    gradf_2 = A.hmul(gradf(A(x_2)))
+    L = norm(gradf_1-gradf_2)/norm(x_2-x_1)
+    L = max(L, 1.0e-30)
+    tau = 25.0/L
+    return tau
 
-def updateStepsize():
-    return 5
+def updateStepsize(searchDir0, searchDir1, Dx, tau1):
+    """ Update stepsize when objective update has not just occurred (adopted from
+        FASTA.m)
+    """
+    Ds = searchDir0 - searchDir1
+    dotprod = np.real(np.dot(Dx, Ds))
+    tauS = norm(Dx)**2/dotprod  # First BB stepsize rule
+    tauM = dotprod/norm(Ds)**2 # Alternate BB stepsize rule
+    tauM = max(tauM, 0)
+    if 2*tauM > tauS:   #  Use "Adaptive"  combination of tau_s and tau_m
+        tau1 = tauM
+    else:
+        tau1 = tauS - tauM/2  # Experiment with this param
+    if tau1 <= 0 or np.isinf(tau1) or np.isnan(tau1): #  Make sure step is non-negative
+        tau1 = tau0*1.5  # let tau grow, backtracking will kick in if stepsize is too big
+    return tau1
 
 
 def gradientDescentSolver(A, At, x0, b0, updateObjective, opts):
