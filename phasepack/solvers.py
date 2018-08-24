@@ -18,6 +18,8 @@ from numpy.linalg import norm
 
 from phasepack.util import Options, Container, ConvMatrix, stopNow, displayVerboseOutput
 from phasepack.initializers import initSpectral, initOptimalSpectral
+from phasepack.gdescent import gdOptions, gradientDescentSolver
+
 
 def validateInput(A, b0, n, opts, At=None):
     assert n>0, 'n must be positive'
@@ -44,6 +46,7 @@ def checkAdjoint(A, b, At=None):
     error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1)
 
     assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
+
 
 def initX(A, b0, n, opts, At=None):
     # initMethods = {'truncatedspectral': initSpectral(A=A, At=At, b0=b0, n=n,
@@ -299,28 +302,106 @@ def solveTAF(A, At, b0, x0, opts):
     return
 
 def solveTWF(A, At, b0, x0, opts):
+    """
+    Implementation of the truncated Wirtinger Flow (TWF) algorithm.
+    The code below is adapted from implementation of the
+    Wirtinger Flow algorithm designed and implemented by E. Candes, X. Li,
+    and M. Soltanolkotabi.
+
+    Inputs:
+        A:    m x n matrix or a function handle to a method that
+              returns A*x.
+        At:   The adjoint (transpose) of 'A'. If 'A' is a function handle,
+              'At' must be provided.
+        b0:   m x 1 real,non-negative vector consists of all the measurements.
+        x0:   n x 1 vector. It is the initial guess of the unknown signal x.
+        opts: A struct consists of the options for the algorithm. For details,
+              see header in solvePhaseRetrieval.m or the User Guide.
+
+        Note: When a function handle is used, the value of 'At' (a function
+        handle for the adjoint of 'A') must be supplied.
+
+    Outputs:
+        sol:  n x 1 vector. It is the estimated signal.
+        outs: A struct containing convergence info. For details,
+              see header in solvePhaseRetrieval.m or the User Guide.
+
+
+     See the script 'testTWF.m' for an example of proper usage of this
+     function.
+
+    Notations:
+        x is the estimation of the signal. y is the vector of measurements such
+        that yi = |<ai,x>|^2 for i = 1,...,m Most of our notations are
+        consistent with the notations used in the TWF paper referenced below.
+
+    Algorithm Description:
+     Similar to WF, TWF successively refines the estimate via a gradient
+     descent scheme.  The loss function is the negative log of the Poisson
+     likelihood.
+
+     Unlike WF, TWF regularizes the gradient flow in a data-dependent fashion
+     by operating only upon some iteration-varying index subsets that
+     correspond to those data yi whose resulting gradient components are in
+     some sense not excessively large.
+
+     This gives us a more stable search directions and avoids the overshoot
+     problem of the Wirtinger Flow Algorithm.
+
+     We also add a feature: when opts.isComplex==false and
+     opts.isNonNegativeOnly==true i.e. when the signal is real and
+     non_negative signal, then at each iteration, negative values in the
+     latest solution vector will be set to 0. This helps to speed up the
+     convergence of errors.
+
+     For a detailed explanation, see the TWF paper referenced below.
+
+     References
+     Paper Title:   Solving Random Quadratic Systems of Equations Is Nearly
+                    as Easy as Solving Linear Systems
+     Place:         Algorithm 1
+     Authors:       Yuxin Chen, Emmanuel J. Candes
+     arXiv Address: https://arxiv.org/abs/1505.05114
+
+    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+    Christoph Studer, & Tom Goldstein
+    Copyright (c) University of Maryland, 2017
+
+    """
+    gdOpts = gdOptions(opts)
+
+
+    def updateObjective(a, b):
+        r1 = lambda x: x*x
+        r2 = lambda x: x*5
+        return r1, r2
+    sol, outs = gradientDescentSolver(A, At, x0, b0, updateObjective, gdOpts)
+
+
+
     return
 
 def solveWirtFlow(A, At, b0, x0, opts):
+
     return
 
 def solveX(A, At, b0, x0, opts):
-    chooseAlgorithm = {'custom': optsCustomAlgorithm(A, At, b0, x0, opts),
-                   'amplitudeflow': solveAmplitudeFlow(A, At, b0, x0, opts),
-                   'coordinatedescent': solveCoordinateDescent(A, At, b0, x0, opts),
-                   'fienup': solveFienup(A, At, b0, x0, opts),
-                   'gerchbergsaxton': solveGerchbergSaxton(A, At, b0, x0, opts),
-                   'kaczmarz': solveKaczmarzSimple(A, At, b0, x0, opts),
-                   'phasemax': solvePhaseMax(A, At, b0, x0, opts),
-                   'phaselamp': solvePhaseLamp(A, At, b0, x0, opts),
-                   'phaselift': solvePhaseLift(A, At, b0, x0, opts),
-                   'raf': solveRAF(A, At, b0, x0, opts),
-                   'rwf': solveRWF(A, At, b0, x0, opts),
-                   'sketchycgm': solveSketchyCGM(A, At, b0, x0, opts),
-                   'taf': solveTAF(A, At, b0, x0, opts),
-                   'twf': solveTWF(A, At, b0, x0, opts),
-                   'wirtflow': solveWirtFlow(A, At, b0, x0, opts)}
-    sol, outs = chooseAlgorithm[opts.algorithm.lower()]
+    chooseAlgorithm = {'custom': optsCustomAlgorithm,
+                   'amplitudeflow': solveAmplitudeFlow,
+                   'coordinatedescent': solveCoordinateDescent,
+                   'fienup': solveFienup,
+                   'gerchbergsaxton': solveGerchbergSaxton,
+                   'kaczmarz': solveKaczmarzSimple,
+                   'phasemax': solvePhaseMax,
+                   'phaselamp': solvePhaseLamp,
+                   'phaselift': solvePhaseLift,
+                   'raf': solveRAF,
+                   'rwf': solveRWF,
+                   'sketchycgm': solveSketchyCGM,
+                   'taf': solveTAF,
+                   'twf': solveTWF,
+                   'wirtflow': solveWirtFlow}
+    sol, outs = chooseAlgorithm[opts.algorithm.lower()](A, At, b0, x0, opts)
 
     return sol, outs, opts
 

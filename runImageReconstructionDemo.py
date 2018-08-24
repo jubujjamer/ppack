@@ -48,7 +48,6 @@ from numpy.random import rand
 
 from phasepack.util import Options, ConvMatrix
 from phasepack.solvers import solvePhaseRetrieval
-
 #########################################################################
 # Measurement Operator Definition
 #########################################################################
@@ -89,7 +88,7 @@ def Atfunc(measurements, masks):
     return im.reshape(-1, 1)
 
 # Specify the target image and number of measurements/masks
-image = imread('data/logo.jpg')      # Load the image from the 'data' folder.
+image = imread('data/shapes.png')      # Load the image from the 'data' folder.
 image = color.rgb2gray(image) # convert image to grayscale
 num_fourier_masks = 8               # Select the number of Fourier masks
 
@@ -110,7 +109,7 @@ A = ConvMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks, numrows
 
 # Run the Phase retrieval Algorithm
 # Set options for PhasePack - this is where we choose the recovery algorithm.
-opts = Options(algorithm = 'Fienup',          # Use the truncated Wirtinger flow method to solve the retrieval
+opts = Options(algorithm = 'twf',          # Use the truncated Wirtinger flow method to solve the retrieval
                                               # problem.  Try changing this to 'Fienup'.
                initMethod = 'optimal',        # Use a spectral method with optimized data pre-processing
                                               # to generate an initial starting point for the solver.

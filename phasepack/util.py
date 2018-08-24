@@ -216,6 +216,7 @@ class ConvMatrix(object):
         error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1)
         assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
         print('Both matrices were adjoints', error)
+
     def hermitic(self):
         return
 
