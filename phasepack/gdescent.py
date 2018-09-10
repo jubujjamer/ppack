@@ -15,8 +15,10 @@ import time
 import warnings
 import numpy as np
 from numpy.linalg import norm
+from numpy.random import randn
 
-from phasepack.util import Options, Container, ConvMatrix
+from pdb import set_trace as bp
+from phasepack.util import Options, Container, ConvMatrix, displayVerboseOutput
 
 
 class gdOptions(object):
@@ -43,11 +45,11 @@ class gdOptions(object):
         try:
             self.tolerancePenaltyLimit = opts.tolerancePenaltyLimit
         except:
-            self.updateObjectivePeriod = 3
+            self.tolerancePenaltyLimit = 3
         try:
             self.searchMethod = opts.searchMethod
         except:
-            self.updateObjectivePeriod = 'steepestDescent'
+            self.searchMethod = 'steepestDescent'
 
         if opts.searchMethod.lower() == 'lbfgs':
             try:
@@ -64,11 +66,13 @@ class gdOptions(object):
             self.ncgResetPeriod = 100
 
 
-def determineSearchDirection(opts, gradf1, iter, lastNcgResetIter, unscaledSearchDir,
-                             lastObjectiveUpdateIter, rhoVals, sVals, yVals, Dg):
+def determineSearchDirection(opts, gradf1, index, lastObjectiveUpdateIter, lastNcgResetIter=None,
+                             unscaledSearchDir=None, rhoVals=None, sVals=None, yVals=None, Dg=None):
     """
         Determine search direction for next iteration based on specified search
-        method
+        methodself.
+
+        TODO: Manage None values
     """
     if opts.searchMethod.lower() == 'steepestdescent':
         searchDir = -gradf1
@@ -76,11 +80,11 @@ def determineSearchDirection(opts, gradf1, iter, lastNcgResetIter, unscaledSearc
         searchDir = -gradf1
         # Reset NCG progress after specified number of iterations have
         # passed
-        if iter - lastNcgResetIter == opts.ncgResetPeriod:
+        if index - lastNcgResetIter == opts.ncgResetPeriod:
             unscaledSearchDir = zeros(n)
-            lastNcgResetIter = iter
+            lastNcgResetIter = index
         # Proceed only if reset has not just occurred
-        if iter != lastNcgResetIter:
+        if index != lastNcgResetIter:
             if opts.betaChoice.lower() == 'hs':
                 # Hestenes-Stiefel
                 beta = -np.real(gradf1.congujate().T*Dg)/np.real(unscaledSearchDir.congujate().T*Dg)
@@ -98,7 +102,7 @@ def determineSearchDirection(opts, gradf1, iter, lastNcgResetIter, unscaledSearc
         unscaledSearchDir = searchDir
     elif opts.searchMethod.lower() == 'lbfgs':
         searchDir = -gradf1
-        iters = np.min(iter-lastObjectiveUpdateIter, opts.storedVectors);
+        iters = np.min(index-lastObjectiveUpdateIter, opts.storedVectors);
         if iters > 0:
             alphas = np.zeros(iters)
             # First loop
@@ -109,44 +113,40 @@ def determineSearchDirection(opts, gradf1, iter, lastNcgResetIter, unscaledSearc
             # Scaling of search direction
             gamma = np.real(Dg.conjugate().T*Dx)/(Dg.conjugate().T*Dg)
             searchDir = gamma*searchDir
-
             # Second loop
             for j in range(iters, 1, -1):
                 beta = rhoVals[j]*np.real(yVals[:,j].congugate().T*searchDir)
                 searchDir = searchDir + (alphas[j]-beta)*sVals[:,j]
-
             searchDir = 1/gamma*searchDir
             searchDir = norm(gradf1)/norm(searchDir)*searchDir
-
     # Change search direction to steepest descent direction if current
     # direction is invalid
     if any(np.isnan(searchDir)) or any(np.isinf(searchDir)):
         searchDir = -gradf1
     # Scale current search direction match magnitude of gradient
     searchDir = norm(gradf1) / norm(searchDir)*searchDir
-
     return searchDir
 
 
-def determineInitialStepsize(A, x0):
+def determineInitialStepsize(A, x0, gradf):
     """ Determine reasonable initial stepsize of current objective function
         (adapted from FASTA.m)
     """
-    x_1 = randn(size(x0))
-    x_2 = randn(size(x0))
-    gradf_1 = A.hmul(gradf(A(x_1)))
-    gradf_2 = A.hmul(gradf(A(x_2)))
+    x_1 = randn(*x0.shape)
+    x_2 = randn(*x0.shape)
+    gradf_1 = A.hmul(gradf(A*x_1))
+    gradf_2 = A.hmul(gradf(A*x_2))
     L = norm(gradf_1-gradf_2)/norm(x_2-x_1)
     L = max(L, 1.0e-30)
     tau = 25.0/L
     return tau
 
-def updateStepsize(searchDir0, searchDir1, Dx, tau1):
+def updateStepsize(searchDir0, searchDir1, Dx, tau1, tau0):
     """ Update stepsize when objective update has not just occurred (adopted from
         FASTA.m)
     """
     Ds = searchDir0 - searchDir1
-    dotprod = np.real(np.dot(Dx, Ds))
+    dotprod = np.real(np.vdot(Dx, Ds))
     tauS = norm(Dx)**2/dotprod  # First BB stepsize rule
     tauM = dotprod/norm(Ds)**2 # Alternate BB stepsize rule
     tauM = max(tauM, 0)
@@ -158,6 +158,53 @@ def updateStepsize(searchDir0, searchDir1, Dx, tau1):
         tau1 = tau0*1.5  # let tau grow, backtracking will kick in if stepsize is too big
     return tau1
 
+def processIteration(index, startTime, Dx, maxDiff, opts, x1, updateObjectiveNow, container,
+                     residualTolerance, tolerancePenalty):
+    currentSolveTime = time.time()-startTime
+    maxDiff = max(norm(Dx), maxDiff)
+    currentResidual = norm(Dx)/maxDiff
+    stopNow = False
+    currentReconError = None
+    currentMeasurementError = None
+    # Obtain recon error only if true solution has been provided
+    if opts.xt:
+        reconEstimate = (x1.conjugate().T@opts.xt)/(x1.conjugate().T*x1)*x1
+        currentReconError = norm(opts.xt-reconEstimate)/norm(opts.xt)
+    if opts.recordTimes:
+        container.appendRecordTime(currentSolveTime)
+    if opts.recordResiduals:
+        container.appendResidual(currentResidual)
+    if opts.recordMeasurementErrors:
+        currentMeasurementError = norm(abs(d1) - b0) / norm(b0)
+        container.appendMeasurementError(currentMeasurementError)
+    if opts.recordReconErrors:
+        assert opts.xt, 'You must specify the ground truth solution if the "recordReconErrors" flag is set to true.  Turn this flag off, or specify the ground truth solution.'
+        container.appendReconError(currentReconError)
+    if opts.verbose == 2:
+
+        displayVerboseOutput(index, currentSolveTime, currentResidual, currentReconError, currentMeasurementError)
+
+    # Terminate if solver surpasses maximum allocated timespan
+    if currentSolveTime > opts.maxTime:
+        stopNow = True
+    # If user has supplied actual solution, use recon error to determine
+    # termination
+    if opts.xt and currentReconError <= opts.tol:
+        stopNow = True
+
+    if currentResidual <= residualTolerance:
+        # Give algorithm chance to recover if stuck at local minimum by
+        # forcing update of objective function
+        updateObjectiveNow = True
+        # If algorithm continues to get stuck, terminate
+        tolerancePenalty = tolerancePenalty + 1
+
+        if tolerancePenalty >= opts.tolerancePenaltyLimit:
+            stopNow = True
+    print(stopNow)
+    print(currentResidual <= residualTolerance)
+    print(tolerancePenalty, opts.tolerancePenaltyLimit)
+    return stopNow, updateObjectiveNow, maxDiff, tolerancePenalty
 
 def gradientDescentSolver(A, At, x0, b0, updateObjective, opts):
     """% -------------------------gradientDescentSolver.m--------------------------------
@@ -258,8 +305,8 @@ def gradientDescentSolver(A, At, x0, b0, updateObjective, opts):
     of
         which to retain LBFGS-specific iteration data. This field is only
         used when searchMethod is set to 'LBFGS'. Default value is 5.
-
     """
+
     # Length of input signal
     n = len(x0)
     if opts.xt:
@@ -280,50 +327,50 @@ def gradientDescentSolver(A, At, x0, b0, updateObjective, opts):
     currentMeasurementError = []
     currentResidual = []
     currentReconError = []
-
+    container = Container(opts)
 
     x1 = x0
     d1 = A*x1
     Dx = 0
 
-    startime = time.time()
-
-    for iter in range(opts.maxIters):
+    startTime = time.time()
+    for index in range(opts.maxIters):
         # Signal to update objective function after fixed number of iterations
         # have passed
-        if iter-lastObjectiveUpdateIter == opts.updateObjectivePeriod:
+        if index-lastObjectiveUpdateIter == opts.updateObjectivePeriod:
             updateObjectiveNow = True
         # Update objective if flag is set
         if updateObjectiveNow:
             updateObjectiveNow = False
-            lastObjectiveUpdateIter = iter
+            lastObjectiveUpdateIter = index
             f, gradf = updateObjective(x1, d1)
             f1 = f(d1)
             gradf1 = A.hmul(gradf(d1))
-            if opts.searchMethod.lower() == 'lbfgs':
-                # Perform LBFGS initialization
-                yVals = np.zeros((n, opts.storedVectors))
-                sVals = np.zeros((n, opts.storedVectors))
-                rhoVals = np.zeros((1, opts.storedVectors))
-            elif opts.searchMethod.lower() == 'ncg':
-                # Perform NCG initialization
-                lastNcgResetIter = iter
-                unscaledSearchDir = zeros((n, 1))
-            searchDir1 = determineSearchDirection()
+            # if opts.searchMethod.lower() == 'lbfgs':
+            #     # Perform LBFGS initialization
+            #     yVals = np.zeros((n, opts.storedVectors))
+            #     sVals = np.zeros((n, opts.storedVectors))
+            #     rhoVals = np.zeros((1, opts.storedVectors))
+            # elif opts.searchMethod.lower() == 'ncg':
+            #     # Perform NCG initialization
+            #     lastNcgResetindex= iter
+            #     unscaledSearchDir = zeros((n, 1))
+
+            searchDir1 = determineSearchDirection(opts, gradf1, index, lastObjectiveUpdateIter)
+
             # Reinitialize stepsize to supplement new objective function
-            tau1 = determineInitialStepsize()
+            tau1 = determineInitialStepsize(A, x0, gradf)
         else:
             gradf1 = A.hmul(gradf(d1))
             Dg = gradf1 - gradf0
+            # if opts.searchMethod.lower() == 'lbfgs':
+            #     # Update LBFGS stored vectors
+            #     sVals = np.hstack(( Dx, sVals[:, 1:opts.storedVectors-1] ))
+            #     yVals = np.hstack(( Dg, yVals[:, 1:opts.storedVectors-1] ))
+            #     rhoVals = np.hstack(( 1/np.real(Dg.conjugate().T@Dx), rhoVals[:, 1:opts.storedVectors-1] ))
 
-            if opts.searchMethod.lower() == 'lbfgs':
-                # Update LBFGS stored vectors
-                sVals = np.hstack(( Dx, sVals[:, 1:opts.storedVectors-1] ))
-                yVals = np.hstack(( Dg, yVals[:, 1:opts.storedVectors-1] ))
-                rhoVals = np.hstack(( 1/np.real(Dg.conjugate().T@Dx), rhoVals[:, 1:opts.storedVectors-1] ))
-
-        searchDir1 = determineSearchDirection()
-        updateStepsize()
+            searchDir1 = determineSearchDirection(opts, gradf1, index, lastObjectiveUpdateIter)
+            updateStepsize(searchDir0, searchDir1, Dx, tau1, tau0)
         x0 = x1
         f0 = f1
         gradf0 = gradf1
@@ -334,25 +381,29 @@ def gradientDescentSolver(A, At, x0, b0, updateObjective, opts):
         Dx = x1 - x0
         d1 = A*x1
         f1 = f(d1)
-
         # We now determine an appropriate stepsize for our algorithm using
         # Armijo-Goldstein condition
         backtrackCount = 0
-        while backtrackCount <= 20:
-            tmp = f0 + 0.1*tau0*np.real(searchDir0.conjugate().T * gradf0)
+        for backtrackCount in range(20):
+            tmp = f0 + 0.1*tau0*np.real(searchDir0.conjugate().T@gradf0)
             # Break if f1 < tmp or f1 is sufficiently close to tmp (determined by error)
             # Avoids division by zero
             if f1 <= tmp:
                 break
-
-            backtrackCount = backtrackCount + 1
             # Stepsize reduced by factor of 5
             tau0 = tau0*0.2
             x1 = x0 + tau0*searchDir0
             Dx = x1 - x0
-            d1 = A(x1)
+            d1 = A*x1
             f1 = f(d1)
-        stopNow = processIteration()
+        # from pdb import set_trace as bp
+        # bp()
+        # maxDiff = max(norm(Dx), maxDiff)
+        # currentResidual = norm(Dx)/maxDiff
+        container.iterationCount = index
+
+        stopNow, updateObjectiveNow, maxDiff, tolerancePenalty= processIteration(index, startTime, Dx, maxDiff, opts, x1, updateObjectiveNow, container, residualTolerance, tolerancePenalty)
         if stopNow:
             break
-    return
+    sol = x1
+    return sol, container

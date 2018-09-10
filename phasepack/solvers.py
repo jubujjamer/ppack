@@ -385,13 +385,12 @@ def solveTWF(A, At, b0, x0, opts):
         s = np.sum(mask)
         f = lambda z: (0.5/s)*np.sum(mask*(np.abs(z)**2-y*np.log(np.abs(z)**2) ) )
         gradf = lambda z: (1.0/s)*mask*(np.abs(z)**2-y)/z.conjugate()
+
         return f, gradf
 
     sol, outs = gradientDescentSolver(A, At, x0, b0, updateObjective, gdOpts)
 
-
-
-    return
+    return sol, outs
 
 def solveWirtFlow(A, At, b0, x0, opts):
 
@@ -526,7 +525,6 @@ def solvePhaseRetrieval(A, b0, n,  At=None, opts=None):
 
    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch, Christoph Studer, & Tom Goldstein Copyright (c) University of Maryland, 2017
     """
-
     # If opts is not provided, create it
     if opts is None:
         opts = Options()

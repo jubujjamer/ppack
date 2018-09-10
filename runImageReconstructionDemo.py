@@ -88,7 +88,7 @@ def Atfunc(measurements, masks):
     return im.reshape(-1, 1)
 
 # Specify the target image and number of measurements/masks
-image = imread('data/shapes.png')      # Load the image from the 'data' folder.
+image = imread('data/logo.jpg')      # Load the image from the 'data' folder.
 image = color.rgb2gray(image) # convert image to grayscale
 num_fourier_masks = 8               # Select the number of Fourier masks
 
@@ -106,7 +106,6 @@ x = image.reshape(-1, 1)   # Convert the signal/image into a vector so PhasePack
 # b = abs(A(x)) Use the measurement operator 'A', defined below, to obtain phaseless measurements.
 b = np.abs(Afunc(x, masks))
 A = ConvMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks, numrows*numcols))
-
 # Run the Phase retrieval Algorithm
 # Set options for PhasePack - this is where we choose the recovery algorithm.
 opts = Options(algorithm = 'twf',          # Use the truncated Wirtinger flow method to solve the retrieval
