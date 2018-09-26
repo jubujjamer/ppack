@@ -293,8 +293,8 @@ class ConvMatrix(object):
             return 1/m*self.matrix.rmatvec(v*self.matrix.matvec(x))
         # ymatvec = lambda x: 1/m*self.matrix.rmatvec(self.matrix.matvec(x))
         yfun = LinearOperator((self.n, self.n), matvec=ymatvec)
-        [eval, x0] = eigs(yfun, k=1, which='LR',tol=1E-3)
-        return eval, x0
+        [eval, x0] = eigs(yfun, k=1, which='LR',tol=1E-5)
+        return x0
 
 def stopNow(opts, currentTime, currentResid, currentReconError):
     """

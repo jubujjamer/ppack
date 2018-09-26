@@ -65,7 +65,6 @@ class gdOptions(object):
         except:
             self.ncgResetPeriod = 100
 
-
 def determineSearchDirection(opts, gradf1, index, lastObjectiveUpdateIter, lastNcgResetIter=None,
                              unscaledSearchDir=None, rhoVals=None, sVals=None, yVals=None, Dg=None):
     """
@@ -121,7 +120,8 @@ def determineSearchDirection(opts, gradf1, index, lastObjectiveUpdateIter, lastN
             searchDir = norm(gradf1)/norm(searchDir)*searchDir
     # Change search direction to steepest descent direction if current
     # direction is invalid
-    if any(np.isnan(searchDir)) or any(np.isinf(searchDir)):
+    # if any(np.isnan(searchDir)) or any(np.isinf(searchDir)):
+    if np.isnan(searchDir).any or np.isinf(searchDir).any:
         searchDir = -gradf1
     # Scale current search direction match magnitude of gradient
     searchDir = norm(gradf1) / norm(searchDir)*searchDir
@@ -201,9 +201,6 @@ def processIteration(index, startTime, Dx, maxDiff, opts, x1, updateObjectiveNow
 
         if tolerancePenalty >= opts.tolerancePenaltyLimit:
             stopNow = True
-    print(stopNow)
-    print(currentResidual <= residualTolerance)
-    print(tolerancePenalty, opts.tolerancePenaltyLimit)
     return stopNow, updateObjectiveNow, maxDiff, tolerancePenalty
 
 def gradientDescentSolver(A, At, x0, b0, updateObjective, opts):
@@ -383,13 +380,13 @@ def gradientDescentSolver(A, At, x0, b0, updateObjective, opts):
         f1 = f(d1)
         # We now determine an appropriate stepsize for our algorithm using
         # Armijo-Goldstein condition
-        backtrackCount = 0
+        tmp0 = 0.1*tau0*np.real(searchDir0.conjugate().T@gradf0)
         for backtrackCount in range(20):
-            tmp = f0 + 0.1*tau0*np.real(searchDir0.conjugate().T@gradf0)
             # Break if f1 < tmp or f1 is sufficiently close to tmp (determined by error)
             # Avoids division by zero
-            if f1 <= tmp:
+            if f1 <= (tmp0 + f0):
                 break
+            tmp0 = tmp0*0.2
             # Stepsize reduced by factor of 5
             tau0 = tau0*0.2
             x1 = x0 + tau0*searchDir0

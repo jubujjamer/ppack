@@ -240,10 +240,7 @@ def initOptimalSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, ve
     # eigenvector because of greater efficiency.
     # Create opts struct for eigs
     # Yfunc = @(x) 1/m*At(T.*A(x));
-    import time
-    start = time.time()
-    [eval, x0] = A.calc_yeigs(m, T, idx)
-    print('Time eigs', time.time()-start)
+    x0 = A.calc_yeigs(m, T, idx)
     if isScaled:
         # Pick measurements according to the indices selected
         b = b0

@@ -41,34 +41,34 @@
 # Christoph Studer, & Tom Goldstein
 # Copyright (c) University of Maryland, 2017
 """
-
+# import cProfile
 from numpy.linalg import norm
 from imageio import imread
 from skimage import color
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.random import rand
-
+import time
 from phasepack.util import Options, ConvMatrix
 from phasepack.solvers import solvePhaseRetrieval
+import scipy
 #########################################################################
 # Measurement Operator Definition
 #########################################################################
 # Create a measurement operator that maps a vector of pixels into Fourier
 # measurements using the random binary masks defined above.
 
-
 def Afunc(pixels, masks):
     """ The fourier mask matrix operator
     As the reconstruction method stores iterates as vectors, this
     function needs to accept a vector as input.
     """
-#    nmasks, numrows, numcols = masks.shape
+    nmasks, numrows, numcols = masks.shape
     im = pixels.reshape(numrows, numcols)
 #    measurements = np.array([np.fft.fft2(im*m).reshape(numrows*numcols,)
 #                             for m in masks]).reshape(-1,1)
-    measurements = np.fft.fft2(masks*im).reshape(-1,1)
-    return measurements
+    measurements = np.fft.fft2(masks*im)
+    return measurements.reshape(nmasks*numrows*numcols, 1)
 
 # The adjoint/transpose of the measurement operator
 
@@ -80,7 +80,6 @@ def Atfunc(measurements, masks):
     measurements = measurements.reshape(nmasks, numrows, numcols)
      # Allocate space for the returned value
     #im = np.zeros((numrows, numcols))
-
 #    im = np.array([np.fft.ifft2(measurements[m, ...])*masks[m, ...]*
 #                               numrows*numcols for m in range(nmasks)])
 #    im_out = sum(im).reshape(-1, 1)
@@ -91,7 +90,7 @@ def Atfunc(measurements, masks):
     return im_out
 
 # Specify the target image and number of measurements/masks
-image = imread('data/logo.jpg')      # Load the image from the 'data' folder.
+image = imread('data/phase1.png')      # Load the image from the 'data' folder.
 image = color.rgb2gray(image) # convert image to grayscale
 num_fourier_masks = 16              # Select the number of Fourier masks
 
