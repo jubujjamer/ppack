@@ -89,7 +89,8 @@ def  initSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, verbose=
 
     m = b0.size  # number of measurements
     if verbose:
-        print('Estimating signal of length %d using a spectral initializer with %d measurements...' % (n, m))
+        print('Estimating signal of length %d using a spectral initializer\
+              with %d measurements...' % (n, m))
 
     # Truncated Wirtinger flow initialization
     alphay = 3                      # (4 also works fine)
@@ -113,7 +114,6 @@ def  initSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, verbose=
     # # Get the eigenvector that corresponds to the largest eigenvalue of the
     # # associated matrix of Yfunc.
     # [eval, x0] = eigs(Ymat, k=1, which='LR')
-
     [eval, x0] = A.calc_yeigs(m, b0, idx)
     # This part does not appear in the paper. We add it for better
     # performance. Rescale the solution to have approximately the correct
@@ -217,7 +217,8 @@ def initOptimalSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, ve
     m = b0.size  # number of measurements
 
     if verbose:
-        print('Estimating signal of length %d using the optimal spectral initializer with %d measurements...' % (n, m))
+        print('Estimating signal of length %d using the optimal spectral\
+              initializer with %d measurements...' % (n, m))
 
     # Measurements as defined in the paper
     y = b0**2
@@ -239,8 +240,10 @@ def initOptimalSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, ve
     # eigenvector because of greater efficiency.
     # Create opts struct for eigs
     # Yfunc = @(x) 1/m*At(T.*A(x));
-
+    import time
+    start = time.time()
     [eval, x0] = A.calc_yeigs(m, T, idx)
+    print('Time eigs', time.time()-start)
     if isScaled:
         # Pick measurements according to the indices selected
         b = b0

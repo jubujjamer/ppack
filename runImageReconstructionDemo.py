@@ -1,5 +1,7 @@
+"""
 #  runImageReconstructionDemo.py
 #
+
 # This script will create phaseless measurements from a test image, and
 # then recover the image using phase retrieval methods.  We now describe
 # the details of the simple recovery problem that this script implements.
@@ -28,6 +30,7 @@
 #
 #                      The Recovery Algorithm
 # The image is recovered by calling the method 'solvePhaseRetrieval', and
+
 # handing the measurement operator and linear measurements in as arguments.
 # A struct containing options is also handed to 'solvePhaseRetrieval'.
 # The entries in this struct specify which recovery algorithm is used.
@@ -37,7 +40,7 @@
 # PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
 # Christoph Studer, & Tom Goldstein
 # Copyright (c) University of Maryland, 2017
-
+"""
 
 from numpy.linalg import norm
 from imageio import imread
@@ -53,20 +56,18 @@ from phasepack.solvers import solvePhaseRetrieval
 #########################################################################
 # Create a measurement operator that maps a vector of pixels into Fourier
 # measurements using the random binary masks defined above.
+
+
 def Afunc(pixels, masks):
-    # The reconstruction method stores iterates as vectors, so this
-    # function needs to accept a vector as input.  Let's convert the vector
-    # back to a 2D image.
-    num_fourier_masks, numrows, numcols = masks.shape
+    """ The fourier mask matrix operator
+    As the reconstruction method stores iterates as vectors, this
+    function needs to accept a vector as input.
+    """
+#    nmasks, numrows, numcols = masks.shape
     im = pixels.reshape(numrows, numcols)
-    # Allocate space for all the measurements
-    measurements = np.zeros((num_fourier_masks, numrows, numcols), dtype='complex128')
-    # Loop over each mask, and obtain the Fourier measurements
-    for m in range(num_fourier_masks):
-        this_mask = masks[m, ...]
-        measurements[m, ...] = np.fft.fft2(im*this_mask)
-    # Convert results into vector format
-    measurements = measurements.reshape(-1, 1)
+#    measurements = np.array([np.fft.fft2(im*m).reshape(numrows*numcols,)
+#                             for m in masks]).reshape(-1,1)
+    measurements = np.fft.fft2(masks*im).reshape(-1,1)
     return measurements
 
 # The adjoint/transpose of the measurement operator
@@ -75,47 +76,57 @@ def Atfunc(measurements, masks):
     # The reconstruction method stores measurements as vectors, so we need
     # to accept a vector input, and convert it back into a 3D array of
     # Fourier measurements.
-    num_fourier_masks, numrows, numcols = masks.shape
-    measurements = measurements.reshape(num_fourier_masks, numrows, numcols)
+    nmasks, numrows, numcols = masks.shape
+    measurements = measurements.reshape(nmasks, numrows, numcols)
      # Allocate space for the returned value
-    im = np.zeros((numrows, numcols))
-    for m in range(num_fourier_masks):
-        this_mask = masks[m, ...]
-        this_measurements = measurements[m, ...]
-        im = im + this_mask*np.fft.ifft2(this_measurements)*numrows*numcols
-    # Vectorize the results before handing them back to the reconstruction
-    # method
-    return im.reshape(-1, 1)
+    #im = np.zeros((numrows, numcols))
+
+#    im = np.array([np.fft.ifft2(measurements[m, ...])*masks[m, ...]*
+#                               numrows*numcols for m in range(nmasks)])
+#    im_out = sum(im).reshape(-1, 1)
+#    print(im_out.shape)
+    im = np.fft.ifft2(measurements)*masks*numrows*numcols
+    im_out = np.sum(im,axis=0).reshape(-1, 1)
+#    print(im_out.shape)
+    return im_out
 
 # Specify the target image and number of measurements/masks
 image = imread('data/logo.jpg')      # Load the image from the 'data' folder.
 image = color.rgb2gray(image) # convert image to grayscale
-num_fourier_masks = 8               # Select the number of Fourier masks
+num_fourier_masks = 16              # Select the number of Fourier masks
 
 # Create 'num_fourier_masks' random binary masks. Store them in a 3d array.
 numrows, numcols = image.shape # Record image dimensions
-random_vars = rand(num_fourier_masks, numrows, numcols) # Start with random variables
-masks = (random_vars<.5)*2 - 1  # Convert random variables into binary (+1/-1) variables
+random_vars = rand(num_fourier_masks, numrows, numcols) # Start with random
+                                                        # variables
+masks = (random_vars<.5)*2 - 1  # Convert random variables into binary (+1/-1)
+                                # variables
 mv = lambda pixels: Afunc(pixels, masks)
 rmv= lambda measurements: Atfunc(measurements, masks)
-
-# Compute phaseless measurements
-# Note, the measurement operator 'A', and it's adjoint 'At', are defined
+# Nete, the meanurement operator 'A', and it's adjoint 'At', are defined
 # below as separate functions
-x = image.reshape(-1, 1)   # Convert the signal/image into a vector so PhasePack can handle it
-# b = abs(A(x)) Use the measurement operator 'A', defined below, to obtain phaseless measurements.
+x = image.reshape(-1, 1)   # Convert the signal/image into a vector so PhasePac
+                           #k can handle it
+# b = abs(A(x)) Use the measurement operator 'A', defined below, to obtain
+# phaseless measurements.
 b = np.abs(Afunc(x, masks))
-A = ConvMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks, numrows*numcols))
+A = ConvMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks,
+                                     numrows*numcols))
 # Run the Phase retrieval Algorithm
 # Set options for PhasePack - this is where we choose the recovery algorithm.
-opts = Options(algorithm = 'twf',          # Use the truncated Wirtinger flow method to solve the retrieval
-                                              # problem.  Try changing this to 'Fienup'.
-               initMethod = 'optimal',        # Use a spectral method with optimized data pre-processing
-                                              # to generate an initial starting point for the solver.
-               tol = 1E-3,                    # The tolerance - make this smaller for more accurate
-                                              # solutions, or larger for faster runtimes.
-               verbose = 2)                   # Print out lots of information as the solver runs
-                                              # (set this to 1 or 0 for less output)
+opts = Options(algorithm = 'twf',      # Use the truncated Wirtinger flow
+                                       # method to solve the retrieval
+                                       # problem. Try changing to 'Fienup'.
+               initMethod = 'optimal', # Use a spectral method with optimized
+
+                                       # data pre-processing to generate an
+                                       # initial starting point for the solver.
+               tol = 1E-3,             # The tolerance - make this smaller for
+                                       # more accurate solutions, or larger
+                                       # for faster runtimes.
+               verbose = 2)            # Print out lots of information as the
+                                       # solver runs (set this to 1 or 0 for
+                                       # less output)
 print('Running %s algorithm\n' % opts.algorithm)
 # Call the solver using the measurement operator 'A', its adjoint 'At', the
 # measurements 'b', the length of the signal to be recovered, and the
@@ -130,11 +141,19 @@ recovered_image = x.reshape(numrows, numcols)
 # Phase retrieval can only recover images up to a phase ambiguity.
 # Let's apply a phase rotation to align the recovered image with the
 # original so it looks nice when we display it.
-rotation = (recovered_image.conjugate().T@image)/np.abs(recovered_image.conjugate().T@image)
-recovered_image = np.real(rotation*recovered_image)
+rotation = (recovered_image.conjugate().T@image)/\
+            np.abs(recovered_image.conjugate().T@image)
+print(rotation.shape)
+recovered_image = np.real(recovered_image)
+
+
 
 # Print some useful info to the console
-print('Image recovery required %d iterations (%f secs)\n' % (outs.iterationCount, outs.solveTimes[-1]))
+print('Image recovery required %d iterations (%f secs)\n'
+      % (outs.iterationCount, outs.solveTimes[-1]))
+# Print some useful info to the console
+print('Image recovery required %d iterations (%f secs)\n' %
+      (outs.iterationCount, outs.solveTimes[-1]))
 # Plot results
 fig, axes = plt.subplots(1, 3)
 # Plot the original image

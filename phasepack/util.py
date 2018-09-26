@@ -17,8 +17,7 @@ from numpy.random import multivariate_normal as mvnrnd
 import matplotlib.pyplot as plt
 
 class Options(object):
-    """ Option managing class.
-    """
+    """ Option managing class. """
     def __init__(self, **kwargs):
 
         # Following options are relevant to every algorithm
@@ -27,24 +26,54 @@ class Options(object):
                           'isComplex': True,
                           'isNonNegativeOnly': False,
                           'maxIters':10000,
-                          'maxTime':300, # The maximum time the solver can run (unit: second). Note: since elapsed time will be checked at the end of each iteration,the real time the solver takes is the time of the iteration it goes beyond this maxTime.
+                          'maxTime':300, # The maximum time the solver can run
+                                         # (unit: second).
+                                         # Note: since elapsed time will be
+                                         # checked at the end of each
+                                         # iteration,the real time the solver
+                                         # takes is the time of the iteration
+                                         # it goes beyond this maxTime.
                           'tol': 1E-4,
-                          'verbose': 0, # Choose from [0, 1, 2]. If 0, print out nothing. If 1, print out status information in the end. If 2, print print out status information every round.
-                          'recordTimes': True, # If the solver record time at each iteration.
-                          'recordMeasurementErrors': False, #  If the solver compute and record measurement errors i.e. norm(abs(A*x-b0))/norm(b0) at each iteration.
-                          'recordReconErrors':False, # If the solver record reconstruction errors i.e. norm(xt-x)/norm(x) at each iteration.
-                          'recordResiduals': True, # If the solver record residuals (metric varies across solvers) at each iteration
-                          'label': None, #  Can be used to choose a label for the algorithm to show up in the legend of a plot.  This is used when plotting results of benchmarks. The algorithm name is used by default if no label is specified.
+                          'verbose': 0,  # Choose from [0, 1, 2]. If 0, printid
+                                         # out nothing. If 1, print out status
+                                         # information in the end. If 2, print
+                                         # out status information every round.
+                          'recordTimes': True, # If the solver record time at
+                                         # each iteration.
+                          'recordMeasurementErrors': False, # If the solver
+                                         # compute and record measurement errors
+                                         # i.e. norm(abs(A*x-b0))/norm(b0) at
+                                         # each iteration.
+                          'recordReconErrors':False, # If the solver record
+                                         # reconstruction errors i.e.
+                                         # norm(xt-x)/norm(x) at each iteration.
+                          'recordResiduals': True, # If the solver record
+                                         # residuals (metric varies acOBross
+                                         # solvers) at each iteration.
+                          'label': None, # Can be used to choose a label for
+                                         # the algorithm to show up in the
+                                         # legend of a plot.  This is used when
+                                         # plotting results of benchmarks. The
+                                         # algorithm name is used by default if
+                                         # no label is specified.
                           # Following three options are unused by default
-                          'xt': [], # The true signal. If it is provided, reconstruction error will be computed and used for stopping condition
-                          'customAlgorithm': None, # Custom algorithm provided by user
-                          'customx0': None, # Custom initializer provided by user
-                          'initAngle': None # When the angle initializer is used, you must specify the angle between the true signal and the initializer
+                          'xt': [],      # The true signal. If it is provided,
+                                         # reconstruction error will be computed
+                                         # and used for stopping condition.
+                          'customAlgorithm': None, # Custom algorithm provided
+                                         # by user.
+                          'customx0': None, # Custom initializer provided by
+                                         # user.
+                          'initAngle': None # When the angle initializer is used
+                                         # you must specify the angle between
+                                         # the true signal and the initializer.
                           }
 
         SpecDefaults = {'custom': {},
                         'amplitudeflow': {
-                            'searchMethod': 'steepestDescent', # Specifies how search direction for line search is chosen upon each iteration
+                            'searchMethod': 'steepestDescent', # Specifies how
+                                         # search direction for line search is
+                                         # chosen upon each iteration
                             'betaChoice': [] # Specifies how beta value is chosen (only used when search method is NCG)
                             },
                         'coordinatedescent': {
@@ -113,7 +142,7 @@ class Options(object):
 
 
     def getDefaultOpts(self):
-        """ Obtain and apply default options that relevant to the specified algorithm
+        """ Obtain and apply default options that relevant to each algorithm.
         """
         return
 
@@ -264,7 +293,7 @@ class ConvMatrix(object):
             return 1/m*self.matrix.rmatvec(v*self.matrix.matvec(x))
         # ymatvec = lambda x: 1/m*self.matrix.rmatvec(self.matrix.matvec(x))
         yfun = LinearOperator((self.n, self.n), matvec=ymatvec)
-        [eval, x0] = eigs(yfun, k=1, which='LR')
+        [eval, x0] = eigs(yfun, k=1, which='LR',tol=1E-3)
         return eval, x0
 
 def stopNow(opts, currentTime, currentResid, currentReconError):

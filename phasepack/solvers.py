@@ -62,14 +62,16 @@ def initX(A, b0, n, opts, At=None):
     # x0 = initMethods[opts.initMethod.lower()]
     chosen_opt = opts.initMethod.lower()
     if chosen_opt == 'truncatedspectral' or chosen_opt == 'truncated':
-        return initSpectral(A=A, At=At, b0=b0, n=n, isTruncated=True, isScaled=True, verbose=opts.verbose)
+        return initSpectral(A=A, At=At, b0=b0, n=n, isTruncated=True,
+                            isScaled=True, verbose=opts.verbose)
     elif chosen_opt == 'spectral':
-        return initSpectral(A=A, At=At, b0=b0, n=n, isTruncated=False, isScaled=True, verbose=opts.verbose)
+        return initSpectral(A=A, At=At, b0=b0, n=n, isTruncated=False,
+                            isScaled=True, verbose=opts.verbose)
     elif chosen_opt == 'optimal' or chosen_opt == 'optimalspectral':
-            return initOptimalSpectral(A=A, At=At, b0=b0, n=n, isScaled=True, verbose=opts.verbose)
+            return initOptimalSpectral(A=A, At=At, b0=b0, n=n, isScaled=True,
+                                       verbose=opts.verbose)
     else:
         raise Exception('Unknown initialization option.')
-    #
     # case {'amplitudespectral','amplitude'}
     #     x0 = initAmplitude(A,At,b0,n,opts.verbose);
     # case {'weightedspectral','weighted'}
@@ -420,7 +422,10 @@ def solveX(A, At, b0, x0, opts):
 def solvePhaseRetrieval(A, b0, n,  At=None, opts=None):
     """ This method solves the problem:
                           Find x given b0 = |Ax+epsilon|
-     Where A is a m by n complex matrix, x is a n by 1 complex vector, b0 is a m by 1 real,non-negative vector and epsilon is a m by 1 vector. The user supplies function handles A, At and measurement b0. Note: The unknown signal to be recovered must be 1D for our interface.
+     Where A is a m by n complex matrix, x is a n by 1 complex vector, b0 is a
+     m by 1 real,non-negative vector and epsilon is a m by 1 vector. The user
+     supplies function handles A, At and measurement b0. Note: The unknown
+     signal to be recovered must be 1D for our interface.
      Inputs:
       A     : A m x n matrix (or optionally a function handle to a method) that returns A*x
       At    : The adjoint (transpose) of 'A.' It can be a n x m matrix or a function handle.
@@ -523,23 +528,16 @@ def solvePhaseRetrieval(A, b0, n,  At=None, opts=None):
 
    For more details and more options in opts, see the Phasepack user guide.
 
-   PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch, Christoph Studer, & Tom Goldstein Copyright (c) University of Maryland, 2017
+   PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+   Christoph Studer, & Tom Goldstein Copyright (c) University of Maryland, 2017
     """
     # If opts is not provided, create it
     if opts is None:
         opts = Options()
-
     if type(A) == np.ndarray:
-        # n = Am.shape[1]
-        # Transform matrix into function form
-        # At = ConvMatrix(A.conjugate().T)
         A = ConvMatrix(A)
-
     # Check that inputs are of valid datatypes and sizes
     validateInput(A=A, b0=b0, n=n, opts=opts)
-    # Check that At is the adjoint/transpose of A
-    # if At is not None:
-    #     checkAdjoint(A=A, b=b0, At=At)
     # # Initialize x0
     x0 = initX(A=A, b0=b0, n=n, opts=opts)
     # % Truncate imaginary components of x0 if working with real values
@@ -547,6 +545,5 @@ def solvePhaseRetrieval(A, b0, n,  At=None, opts=None):
         x0 = np.real(x0)
     elif opts.isNonNegativeOnly:
         warnings.warn('opts.isNonNegativeOnly will not be used when the signal is complex.');
-
     [sol, outs, opts] = solveX(A=A, At=None, b0=b0, x0=x0, opts=opts) # Solve the problem using the specified algorithm
     return sol, outs, opts
