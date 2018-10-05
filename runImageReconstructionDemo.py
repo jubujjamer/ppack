@@ -120,7 +120,7 @@ opts = Options(algorithm = 'twf',      # Use the truncated Wirtinger flow
 
                                        # data pre-processing to generate an
                                        # initial starting point for the solver.
-               tol = 1E-3,             # The tolerance - make this smaller for
+               tol = 1E-2,             # The tolerance - make this smaller for
                                        # more accurate solutions, or larger
                                        # for faster runtimes.
                verbose = 2)            # Print out lots of information as the
