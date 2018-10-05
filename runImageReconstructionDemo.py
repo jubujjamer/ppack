@@ -90,7 +90,7 @@ def Atfunc(measurements, masks):
     return im_out
 
 # Specify the target image and number of measurements/masks
-image = imread('data/phase1.png')      # Load the image from the 'data' folder.
+image = imread('data/logo.jpg')      # Load the image from the 'data' folder.
 image = color.rgb2gray(image) # convert image to grayscale
 num_fourier_masks = 16              # Select the number of Fourier masks
 
