@@ -1,16 +1,13 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-""" File solvers.py
+"""
+This module provides the implementation of the different solvers for the phase
+retrieval problem.
 
-Last update: 15/08/2018
+Functions:
+----------
 
-Usage:
+checkAdjoint:       Checks wether A and At are transpose conjugates.
 
 """
-__version__ = "1.0.0"
-__author__ = 'Juan M. Bujjamer'
-__all__ = ['solvePhaseRetrieval']
-import numba
 from numba import jit
 import time
 import warnings
@@ -24,72 +21,33 @@ from phasepack.initializers import initSpectral, initOptimalSpectral
 from phasepack.gdescent import gdOptions, gradientDescentSolver
 
 
-def validateInput(A, b0, n, opts, At=None):
-    assert n>0, 'n must be positive'
-
-    assert (np.abs(b0) == b0).all, 'b must be real-valued and non-negative'
-
-    if callable(A) and type(At) == np.ndarray:
-        raise Exception('If A is a function handle, then At must also be a function handle')
-
-    if opts.customx0:
-        assert np.shape(opts.customx0) == (n, 1), 'customx0 must be a column vector of length n'
-
-def checkAdjoint(A, b, At=None):
-    """ Check that A and At are indeed ajoints of one another
-    """
-    y = np.random.randn(*b.shape);
-    # Aty = At(y) # Check
-    Aty = At*y #At@y
-    x = np.random.randn(*Aty.shape)
-    # Ax = A(x) # check
-    Ax = A*x #Ax = A@x
-    innerProduct1 = Ax.conjugate().T@y
-    innerProduct2 = x.conjugate().T@Aty
-    error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1)
-
-    assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
-
-
-def initX(A, b0, n, opts, At=None):
-    # initMethods = {'truncatedspectral': initSpectral(A=A, At=At, b0=b0, n=n,
-    #                                     isTruncated=True, isScaled=True, verbose=opts.verbose),
-    #                 'truncated': initSpectral(A=A, At=At, b0=b0, n=n,
-    #                                     isTruncated=True, isScaled=True, verbose=opts.verbose),
-    #                 'spectral': initSpectral(A=A, At=At, b0=b0, n=n,
-    #                                     isTruncated=False, isScaled=True, verbose=opts.verbose),
-    #                 'optimal':  initOptimalSpectral(A=A, At=At, b0=b0, n=n,
-    #                                     isScaled=True, verbose=opts.verbose),
-    #                 'optimalspectral':  initOptimalSpectral(A=A, At=At, b0=b0, n=n,
-    #                                     isScaled=True, verbose=opts.verbose)}
-    # x0 = initMethods[opts.initMethod.lower()]
+def initX(A, b0, opts, At=None):
     chosen_opt = opts.initMethod.lower()
     if chosen_opt == 'truncatedspectral' or chosen_opt == 'truncated':
-        return initSpectral(A=A, At=At, b0=b0, n=n, isTruncated=True,
+        return initSpectral(A=A, At=At, b0=b0, isTruncated=True,
                             isScaled=True, verbose=opts.verbose)
     elif chosen_opt == 'spectral':
-        return initSpectral(A=A, At=At, b0=b0, n=n, isTruncated=False,
+        return initSpectral(A=A, At=At, b0=b0, isTruncated=False,
                             isScaled=True, verbose=opts.verbose)
     elif chosen_opt == 'optimal' or chosen_opt == 'optimalspectral':
-            return initOptimalSpectral(A=A, At=At, b0=b0, n=n, isScaled=True,
+            return initOptimalSpectral(A=A, At=At, b0=b0, isScaled=True,
                                        verbose=opts.verbose)
-    else:
-        raise Exception('Unknown initialization option.')
-    # case {'amplitudespectral','amplitude'}
-    #     x0 = initAmplitude(A,At,b0,n,opts.verbose);
-    # case {'weightedspectral','weighted'}
-    #     x0 = initWeighted(A,At,b0,n,opts.verbose);
-    # case {'orthogonalspectral','orthogonal'}
-    #     x0 = initOrthogonal(A,At,b0,n,opts.verbose);
-
+#    elif chosen_opt == 'amplitudespectral' or chosen_opt == 'amplitude':
+#        return initAmplitude(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
+#    elif chosen_opt == 'weightedspectral' or chosen_opt == 'weighted':
+#        return initWeighted(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
+#    elif chosen_opt == 'orthogonalspectral' or chosen_opt == 'orthogonal':
+#        return initOrthogonal(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
+#    elif chosen_opt == 'angle':
+#        return initAngle(xt=opts.xt, angle=opts.initAngle)
     # case 'angle'
     #     assert(isfield(opts,'xt'),'The true solution, opts.xt, must be specified to use the angle initializer.')
     #     assert(isfield(opts,'initAngle'),'An angle, opts.initAngle, must be specified (in radians) to use the angle initializer.')
     #     x0 = initAngle(opts.xt, opts.initAngle);
     # case 'custom'
     #     x0 = opts.customx0;
-    # otherwise
-    #     error('Unknown initialization method "%s"', opts.initMethod);
+    else:
+        raise Exception('Unknown initialization option.')
     return x0
 
 def optsCustomAlgorithm(A, At, b0, x0, opts):
@@ -104,70 +62,72 @@ def solveCoordinateDescent(A, At, b0, x0, opts):
 def solveFienup(A, At, b0, x0, opts):
     """ Solver for Fienup algorithm.
 
-   Inputs:
-      A:    m x n matrix or a function handle to a method that
-            returns A*x.
-      At:   The adjoint (transpose) of 'A'. If 'A' is a function handle,
-            'At' must be provided.
-      b0:   m x 1 real,non-negative vector consists of all the measurements.
-      x0:   n x 1 vector. It is the initial guess of the unknown signal x.
-      opts: A struct consists of the options for the algorithm. For details,
-            see header in solvePhaseRetrieval.m or the User Guide.
+    Parameters:
+    -----------
+    A:    m x n matrix or a function handle to a method that
+          returns A*x.
+    At:   The adjoint (transpose) of 'A'. If 'A' is a function handle,
+          'At' must be provided.
+    b0:   m x 1 real,non-negative vector consists of all the measurements.
+    x0:   n x 1 vector. It is the initial guess of the unknown signal x.
+    opts: A struct consists of the options for the algorithm. For details,
+          see header in solvePhaseRetrieval.m or the User Guide.
 
-      Note: When a function handle is used, the
-      value of 'At' (a function handle for the adjoint of 'A') must be
-      supplied.
+    Note: When a function handle is used, the
+    value of 'At' (a function handle for the adjoint of 'A') must be
+    supplied.
 
-   Outputs:
-      sol:  n x 1 vector. It is the estimated signal.
-      outs: A struct consists of the convergence info. For details,
-            see header in solvePhaseRetrieval.m or the User Guide.
+    Outputs:
+    --------
+    sol:  n x 1 vector. It is the estimated signal.
+    outs: A struct consists of the convergence info. For details,
+          see header in solvePhaseRetrieval.m or the User Guide.
 
+    See the script 'testFienup.m' for an example of proper usage of this
+    function.
 
-   See the script 'testFienup.m' for an example of proper usage of this
-   function.
+    Notations:
+    ----------
+    The notations mainly follow those used in Section 2 of the Fienup paper.
+    gk:    g_k   the guess to the signal before the k th round
+    gkp:   g_k'  the approximation to the signal after the k th round of
+            iteration
+    gknew: g_k+1 the guess to the signal before the k+1 th round
+    Gkp:   G_k'  the approximation to fourier transfor of the signal after
+                    satisfying constraints on fourier-domain
+    beta:  \beta the Tuning parameter for object-domain update
 
-  % Notations
-   The notations mainly follow those used in Section 2 of the Fienup paper.
-   gk:    g_k   the guess to the signal before the k th round
-   gkp:   g_k'  the approximation to the signal after the k th round of
-          iteration
-   gknew: g_k+1 the guess to the signal before the k+1 th round
-   Gkp:   G_k'  the approximation to fourier transfor of the signal after
-                satisfying constraints on fourier-domain
-   beta:  \beta the Tuning parameter for object-domain update
+    Algorithm Description:
+    ----------------------
+    Fienup Algorithm is the same as Gerchberg-Saxton Algorithm except when
+    the signal is real and non-negative (or has constraint in general). When
+    this happens, the update on the object domain is different.
 
-  % Algorithm Description
-   Fienup Algorithm is the same as Gerchberg-Saxton Algorithm except when
-   the signal is real and non-negative (or has constraint in general). When
-   this happens, the update on the object domain is different.
+    Like Gerchberg-Saxton, Fienup transforms back and forth between the two
+    domains, satisfying the constraints in one before returning to the
+    other. The method has four steps (1) Left multipy the current estimation
+    x by the measurement matrix A and get Ax. (2) Keep phase, update the
+    magnitude using the measurements b0, z = b0.*sign(Ax). (3) Solve the
+    least-squares problem
+                sol = \argmin ||Ax-z||^2
+    to get our new estimation x. We use Matlab built-in solver lsqr()
+    for this least square problem.
+    (4) ImposeResultsContainer constraints on x(This step is ignored when there is
+    no constraints)
 
-   Like Gerchberg-Saxton, Fienup transforms back and forth between the two
-   domains, satisfying the constraints in one before returning to the
-   other. The method has four steps (1) Left multipy the current estimation
-   x by the measurement matrix A and get Ax. (2) Keep phase, update the
-   magnitude using the measurements b0, z = b0.*sign(Ax). (3) Solve the
-   least-squares problem
-            sol = \argmin ||Ax-z||^2
-       to get our new estimation x. We use Matlab built-in solver lsqr()
-       for this least square problem.
-   (4) ImposeResultsContainer constraints on x(This step is ignored when there is
-   no constraints)
+    For a detailed explanation, see the Fienup paper referenced below.
 
-   For a detailed explanation, see the Fienup paper referenced below.
+    References:
+    -----------
+    Paper Title:   Phase retrieval algorithms: a comparison
+    Place:         Section II for notation and Section V for the
+                    Input-Output Algorithm
+    Authors:       J. R. Fienup
+    Address: https://www.osapublishing.org/ao/abstract.cfm?uri=ao-21-15-2758
 
-
-  % References
-   Paper Title:   Phase retrieval algorithms: a comparison
-   Place:         Section II for notation and Section V for the
-                  Input-Output Algorithm
-   Authors:       J. R. Fienup
-   Address: https://www.osapublishing.org/ao/abstract.cfm?uri=ao-21-15-2758
-
-   PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-   Christoph Studer, & Tom Goldstein
-   Copyright (c) University of Maryland, 2017
-
+    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+    Christoph Studer, & Tom Goldstein
+    Copyright (c) University of Maryland, 2017
     """
 
     def validateOptions(opts):
@@ -175,46 +135,23 @@ def solveFienup(A, At, b0, x0, opts):
             float(opts.FienupTuning)
         except:
             raise Exception("%s should be a number" % opts.FienupTuning)
-#
     # Initialization
     gk = x0                      # Initial Guess, corresponds to g_k in the paper
     gkp = x0                     # corresponds to g_k' in the paper
     gknew = x0                   # corresponds to g_k+1 in the paper
     beta = opts.FienupTuning     # GS tuning parameter
-#
-    # Initialize values potentially computed at each round.
-    currentTime = []
-    currentResid = []
-    currentReconError = []
-    currentMeasurementError = []
-
     # Initialize vectors for recording convergence information
-    # [solveTimes,measurementErrors,reconErrors,residuals] = initializeResultsResultsContainers(opts);
     container = ResultsContainer(opts)
-
-#     % Build a function handle for matlab's conjugate-gradient solver
-#     function y = Afun(x,transp_flag)
-#        if strcmp(transp_flag,'transp')       % y = A'*x
-#           y = At(x);
-#        elseif strcmp(transp_flag,'notransp') % y = A*x
-#           y = A(x);
-#        end
-#     end
-#
-    startTime = time.time() # Start timer
-#
+    startTime = time.time()
     for iter in range(opts.maxIters):
-#
-#         Ax = A(gk);            % Intermediate value to save repetitive computation
-#         Gkp = b0.*sign(Ax);    % Calculate the initial spectral magnitude, G_k' in the paper.
-        Ax = A*gk            # Intermediate value to save repetitive computation
-        Gkp = b0*Ax/np.abs(Ax)
+        Ax = A*gk # Intermediate value to save repetitive computation
+        Gkp = b0*Ax/np.abs(Ax) # This is MATLAB's definition of complex sign
         #-----------------------------------------------------------------------
         # Record convergence information and check stopping condition
         # If xt is provided, reconstruction error will be computed and used for stopping
         # condition. Otherwise, residual will be computed and used for stopping
         # condition.
-        if len(opts.xt) > 0:
+        if opts.xt:
             x = gk
             xt = opts.xt
             # Compute optimal rotation
@@ -224,7 +161,7 @@ def solveFienup(A, At, b0, x0, opts):
             if opts.recordReconErrors:
                 container.appendReconError(currentReconError)
 
-        if not len(opts.xt) == 0 or opts.recordResiduals:
+        if not opts.xt or opts.recordResiduals:
             currentResid = norm(A.hmul((Ax-Gkp)))/norm(Gkp)
 
         if opts.recordResiduals:
@@ -237,13 +174,16 @@ def solveFienup(A, At, b0, x0, opts):
         if opts.recordMeasurementErrors:
             currentMeasurementError = norm(np.abs(A*gk)-b0)/norm(b0)
             container.appendMeasurementError(currentMeasurementError)
-#
         # Display verbose output if specified
         if opts.verbose == 2:
-          displayVerboseOutput(iter, currentTime, currentResid, currentReconError, currentMeasurementError)
-
+            displayVerboseOutput(iter, container.lastTime(),
+                               container.lastResidual(),
+                               container.lastReconError(),
+                               container.lastMeasError())
         #  Test stopping criteria.
-        if stopNow(opts, currentTime, currentResid, currentReconError):
+        if stopNow(opts, container.lastTime(),
+                         container.lastResidual(),
+                         container.lastReconError()):
             break
         # Solve the least-squares problem
         # gkp = \argmin ||Ax-Gkp||^2.
@@ -251,7 +191,7 @@ def solveFienup(A, At, b0, x0, opts):
         # gkp = inv(A)*Gkp
         # If A is a fourier transform( and measurements are not oversampled i.e. m==n),
         # gkp = inverse fourier transform of Gkp
-        gkp = A.lsqr(Gkp, opts.tol/100, opts.maxInnerIters, gk)
+        gkp = A.lsqr(Gkp, opts.tol, opts.maxInnerIters, gk)
         # gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.maxInnerIters,[],[],gk)
 
         # If the signal is real and non-negative, Fienup updates object domain
@@ -266,18 +206,9 @@ def solveFienup(A, At, b0, x0, opts):
         else: # Otherwise, its update is the same as the GerchBerg-Saxton algorithm
             gknew = gkp.reshape(-1,1)
         gk = gknew # update gk
-        # print(gk)
     sol = gk
 #     % Create output according to the options chosen by user
     container.iterationCount = iter
-    # Display verbose output if specified
-    if opts.verbose:
-        displayVerboseOutput(iter, currentTime, currentResid, currentReconError, currentMeasurementError)
-#
-#
-# % Check the validify of algorithm specific options
-
-
     return sol, container
 
 def solveGerchbergSaxton(A, At, b0, x0, opts):
@@ -431,7 +362,7 @@ def solveX(A, At, b0, x0, opts):
     return sol, outs, opts
 
 
-def solvePhaseRetrieval(A, b0, n,  At=None, opts=None):
+def solvePhaseRetrieval(A, b0, At=None, opts=None):
     """ This method solves the problem:
                           Find x given b0 = |Ax+epsilon|
      Where A is a m by n complex matrix, x is a n by 1 complex vector, b0 is a
@@ -549,9 +480,9 @@ def solvePhaseRetrieval(A, b0, n,  At=None, opts=None):
     if type(A) == np.ndarray:
         A = ConvMatrix(A)
     # Check that inputs are of valid datatypes and sizes
-    validateInput(A=A, b0=b0, n=n, opts=opts)
+    A.validateInput(b0=b0, opts=opts)
     # # Initialize x0
-    x0 = initX(A=A, b0=b0, n=n, opts=opts)
+    x0 = initX(A=A, b0=b0, opts=opts)
     # % Truncate imaginary components of x0 if working with real values
     if not opts.isComplex:
         x0 = np.real(x0)

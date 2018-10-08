@@ -16,7 +16,7 @@ Copyright (c) University of Maryland, 2017
 
 __version__ = "1.0.0"
 __author__ = 'Juan M. Bujjamer'
-__all__ = ['initSpectral']
+__all__ = ['initSpectral', 'initOptimalSpectral']
 
 import numpy as np
 from numpy.linalg import norm
@@ -26,7 +26,7 @@ from phasepack.containers import Options
 from phasepack.matops import ConvMatrix
 
 
-def  initSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, verbose=False):
+def  initSpectral(A, b0, At=None, isScaled=False, isTruncated=False, verbose=False):
     """ Intializer proposed in Algorithm 1 of the Wirtinger Flow paper.
 
     This initializer forms a matrix from the data and computes the largest
@@ -106,16 +106,10 @@ def  initSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, verbose=
     Arxiv Address: https://arxiv.org/abs/1505.05114
     """
 
-    # if  type(A) == np.ndarray:
-    #     n = Am.shape[1]
-    #     # Transform matrix into function form
-    #     At = lambda x: Am.T@x
-    #     A = lambda x: Am@x
-
     m = b0.size  # number of measurements
     if verbose:
         print('Estimating signal of length %d using a spectral initializer\
-              with %d measurements...' % (n, m))
+              with %d measurements...' % (A.n, m))
 
     # Truncated Wirtinger flow initialization
     alphay = 3                      # (4 also works fine)
@@ -130,15 +124,6 @@ def  initSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, verbose=
 
     # Build the function handle associated to the matrix Y
     # in the TWF paper Algorithm 1
-    # Yfunc = lambda x : 1/m*At((idx.*b0.^2).*A(x))
-    # Ymat = 1/m*At@((idx*b0**2)*A)
-    # # Y = 1/m*At.product()
-    # # Our implemention uses Matlab's built-in function eigs() to get the leading
-    # # eigenvector because of greater efficiency.
-    # # Create opts struct for eigs
-    # # Get the eigenvector that corresponds to the largest eigenvalue of the
-    # # associated matrix of Yfunc.
-    # [eval, x0] = eigs(Ymat, k=1, which='LR')
     [eval, x0] = A.calc_yeigs(m, b0, idx)
     # This part does not appear in the paper. We add it for better
     # performance. Rescale the solution to have approximately the correct
@@ -158,7 +143,7 @@ def  initSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, verbose=
 
     return x0
 
-def initOptimalSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, verbose=False):
+def initOptimalSpectral(A, b0, At=None, isScaled=False, isTruncated=False, verbose=False):
     """
     Optimal spectral initializer.
 
@@ -243,11 +228,11 @@ def initOptimalSpectral(A, b0, n, At=None, isScaled=False, isTruncated=False, ve
 
     if verbose:
         print('Estimating signal of length %d using the optimal spectral\
-              initializer with %d measurements...' % (n, m))
+              initializer with %d measurements...' % (A.n, m))
 
     # Measurements as defined in the paper
     y = b0**2
-    delta = m/n    # Used in equation (5) of paper
+    delta = m/A.n    # Used in equation (5) of paper
 
     # Normalize the measurements
     ymean = np.mean(y)
