@@ -48,7 +48,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from numpy.random import rand
 import time
-from phasepack.util import Options, ConvMatrix
+from phasepack.containers import Options
+from phasepack.matops import ConvMatrix
 from phasepack.solvers import solvePhaseRetrieval
 import scipy
 #########################################################################

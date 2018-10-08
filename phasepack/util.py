@@ -1,17 +1,18 @@
 """
-This module provides classes to be used as containers of options and partial
-results for the phase reconstruction algorithms.
+This module provides classes to be used as containers of matrix operations.
+It is deviced to keep efficient implementations of the different methods, so
+the idea is to explicitly state here hoy left and right matrix multiplications
+are calculated, eigenvectors and other useful matrix operations.
 
 Classes
 -------
 
-Options             A Class with options for all the reconstruction algorithms.
+ConvMarix           A Class containing typical convolution matrix operations.
 
-ResultsContainer    A Class containing results and time progress of each
-                    iteration
-
-Python version based on MATLAB implementation by Rohan Chandra, Ziyuan Zhong,
-Justin Hontz, Val McCulloch, Christoph Studer, & Tom Goldstein.
+Python version of the phasepack module by Juan M. Bujjamer, University of
+Buenos Aires, 2018. Based on MATLAB implementation by Rohan Chandra,
+Ziyuan Zhong, Justin Hontz, Val McCulloch, Christoph Studer,
+& Tom Goldstein.
 Copyright (c) University of Maryland, 2017
 """
 __version__ = "1.0.0"
@@ -20,181 +21,6 @@ __author__ = 'Juan M. Bujjamer'
 import numpy as np
 from scipy.sparse.linalg import LinearOperator, eigs, lsqr
 from numpy.random import multivariate_normal as mvnrnd
-
-class Options(object):
-    """ A Class to manage options  for the reconstruction algorithms.
-
-    It has two dictionaries as attributes, one for the general options,
-    used in all the algorithms and one with parameters only valid for
-    specific methods.
-    """
-    def __init__(self, **kwargs):
-
-        # Following options are relevant to every algorithm
-        GeneralOptsDefault = {'algorithm': 'gerchbergsaxton',
-                          'initMethod': 'optimal',
-                          'isComplex': True,
-                          'isNonNegativeOnly': False,
-                          'maxIters':10000,
-                          'maxTime':300, # The maximum time the solver can run
-                                         # (unit: second).
-                                         # Note: since elapsed time will be
-                                         # checked at the end of each
-                                         # iteration,the real time the solver
-                                         # takes is the time of the iteration
-                                         # it goes beyond this maxTime.
-                          'tol': 1E-4,
-                          'verbose': 0,  # Choose from [0, 1, 2]. If 0, printid
-                                         # out nothing. If 1, print out status
-                                         # information in the end. If 2, print
-                                         # out status information every round.
-                          'recordTimes': True, # If the solver record time at
-                                         # each iteration.
-                          'recordMeasurementErrors': False, # If the solver
-                                         # compute and record measurement errors
-                                         # i.e. norm(abs(A*x-b0))/norm(b0) at
-                                         # each iteration.
-                          'recordReconErrors':False, # If the solver record
-                                         # reconstruction errors i.e.
-                                         # norm(xt-x)/norm(x) at each iteration.
-                          'recordResiduals': True, # If the solver record
-                                         # residuals (metric varies acOBross
-                                         # solvers) at each iteration.
-                          'label': None, # Can be used to choose a label for
-                                         # the algorithm to show up in the
-                                         # legend of a plot.  This is used when
-                                         # plotting results of benchmarks. The
-                                         # algorithm name is used by default if
-                                         # no label is specified.
-                          # Following three options are unused by default
-                          'xt': [],      # The true signal. If it is provided,
-                                         # reconstruction error will be computed
-                                         # and used for stopping condition.
-                          'customAlgorithm': None, # Custom algorithm provided
-                                         # by user.
-                          'customx0': None, # Custom initializer provided by
-                                         # user.
-                          'initAngle': None # When the angle initializer is used
-                                         # you must specify the angle between
-                                         # the true signal and the initializer.
-                          }
-
-        SpecDefaults = {'custom': {},
-                        'amplitudeflow': {
-                            'searchMethod': 'steepestDescent', # Specifies how
-                                         # search direction for line search is
-                                         # chosen upon each iteration
-                            'betaChoice': [] # Specifies how beta value is chosen (only used when search method is NCG)
-                            },
-                        'coordinatedescent': {
-                            'indexChoice': 'greedy' #the rule for picking up index, choose from 'cyclic','random' ,'greedy'].
-                            },
-                        'fienup': {
-                            'FienupTuning': 0.5, # Tunning parameter for Gerchberg-Saxton algorithm. It influences the update of the fourier domain value at each iteration.
-                            'maxInnerIters': 10 # The max number of iterations the inner-loop solver  will have.
-                            },
-
-                        'gerchbergsaxton': {
-                            'maxInnerIters': 10 # The max number of iterations  the inner-loop solver will have.
-                            },
-                        'kaczmarz': {
-                            'indexChoice': 'cyclic' # the rule for picking up index, choose from ['cyclic','random']
-                            },
-                        'phasemax': {},
-                        'phaselamp': {},
-                        'phaselift': {
-                            'regularizationPara' : 0.1 # This controls the weight of trace(X), where X=xx' in the objective function (see phaseLift paper for details)
-                            },
-                        'raf': {
-                            'reweightPeriod': 20, # The maximum number of iterations that are allowed to occurr between reweights of objective function
-                            'searchMethod': 'steepestDescent', # Specifies how search direction for line search is chosen upon each iteration
-                            'betaChoice': 'HS' #  Specifies how beta value is chosen (only used when search
-                            # method is NCG). Used only for NCG solver.
-                        },
-                        'rwf': {
-                            'eta': 0.9, # Constant used to reweight objective function (see RWF paper for details)
-                            'reweightPeriod': 20, # The maximum number of iterations that are allowed to occurr between reweights of objective function
-                            'searchMethod': 'steepestDescent', # Specifies how search direction for line search is chosen upon each iteration
-                            'betaChoice': 'HS' # Specifies how beta value is chosen (only used when search method is NCG) Used only for NCG solver
-                        },
-                        'sketchycgm': {
-                            'rank': 1, # rank parameter. For details see Algorithm1 in the sketchyCGM paper.
-                            'eta': 1 # stepsize parameter
-                            },
-                        'taf': {
-                            'gamma': 0.7, # Constant used to truncate objective function (see paper for details). The maximum number of iterations that are allowed to occurr between truncations of objective function
-                            'truncationPeriod': 20, # Specifies how search direction for line search is chosen upon each iteration
-                            'searchMethod': 'steepestDescent',
-                            'betaChoice': 'HS' # Specifies how beta value is chosen (only used when search method is NCG)Used only for NCG solver
-                            },
-                        'twf': {
-                            'truncationPeriod': 20, # The maximum number of iterations that are allowed to occur between truncations of objective function
-                            'searchMethod': 'steepestDescent', # Specifies how search direction for line search is chosen upon each iteration
-                            'betaChoice': 'HS', # Specifies how beta value is chosen (only used when search method is NCG). Used only for NCG solver.
-                            # Truncation parameters. These default values are defined as in the proposing paper for the case where line search is used.
-                            'alpha_lb': 0.1,
-                            'alpha_ub': 5,
-                            'alpha_h': 6
-                            },
-                        'wirtflow': {
-                            'searchMethod': 'steepestDescent', # Specifies how search direction for line search is chosen upon each iteration
-                            'betaChoice': 'HS' # Specifies how beta value is chosen (only used when search method is NCG). Used only for NCG solver.
-                            }
-                        }
-        for key, val in GeneralOptsDefault.items():
-            if key in kwargs.keys():
-                setattr(self, key, kwargs[key])
-            else:
-                setattr(self, key, val)
-
-        for key, val in SpecDefaults[self.algorithm.lower()].items():
-            setattr(self, key, val)
-
-class ResultsContainer(object):
-    """
-    Container for results and timing information of the algorithms.
-
-    This Class contains and initializes outputs containers for convergence info
-    according to user's choice. Its inputs is the Options Class wich selects
-    which parameter are stored.
-
-    solveTimes: array
-                contains the time required for each iteration.
-    measurementErrors: array
-                       actual errors.
-    reconErrors: array
-                 recordReconErrors.
-    residuals: array
-               recordResiduals.
-
-    """
-    def __init__(self, opts):
-        self.solveTimes = None
-        self.measurementErrors = None
-        self.reconErrors = None
-        self.residuals = None
-        self.iterationCount = None
-
-        if opts.recordTimes:
-            self.solveTimes = np.zeros([])
-        if opts.recordMeasurementErrors:
-            self.measurementErrors = np.zeros([])
-        if opts.recordReconErrors:
-            self.reconErrors = np.zeros([])
-        if opts.recordResiduals:
-            self.residuals = np.zeros([])
-
-    def appendRecordTime(self, recordTime):
-        self.solveTimes = np.append(self.solveTimes, recordTime)
-
-    def appendMeasurementError(self, measurementError):
-        self.measurementErrors = np.append(self.measurementErrors, measurementError)
-
-    def appendReconError(self, reconError):
-        self.reconErrors = np.append(self.reconErrors, reconError)
-
-    def appendResidual(self, residual):
-        self.residuals = np.append(self.residuals, residual)
 
 class ConvMatrix(object):
     """ Convolution matrix container.

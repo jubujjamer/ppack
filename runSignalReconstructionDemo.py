@@ -31,7 +31,8 @@ from numpy.random import randn
 import numpy as np
 import matplotlib.pyplot as plt
 
-from phasepack.util import Options, ConvMatrix
+from phasepack.containers import Options
+from phasepack.matops import ConvMatrix
 from phasepack.solvers import solvePhaseRetrieval
 
 # Parameters

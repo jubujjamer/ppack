@@ -17,7 +17,9 @@ import warnings
 import numpy as np
 from numpy.linalg import norm
 
-from phasepack.util import Options, ResultsContainer, ConvMatrix, stopNow, displayVerboseOutput
+from phasepack.containers import Options, ResultsContainer, displayVerboseOutput, stopNow
+from phasepack.matops import ConvMatrix
+
 from phasepack.initializers import initSpectral, initOptimalSpectral
 from phasepack.gdescent import gdOptions, gradientDescentSolver
 
