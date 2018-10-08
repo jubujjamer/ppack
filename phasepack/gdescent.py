@@ -10,7 +10,8 @@ Usage:
 __version__ = "1.0.0"
 __author__ = 'Juan M. Bujjamer'
 __all__ = ['gradientDescentSolver']
-
+import numba
+from numba import jit
 import time
 import warnings
 import numpy as np
@@ -18,7 +19,7 @@ from numpy.linalg import norm
 from numpy.random import randn
 
 from pdb import set_trace as bp
-from phasepack.util import Options, Container, ConvMatrix, displayVerboseOutput
+from phasepack.util import Options, ResultsContainer, ConvMatrix, displayVerboseOutput
 
 
 class gdOptions(object):
@@ -324,7 +325,7 @@ def gradientDescentSolver(A, At, x0, b0, updateObjective, opts):
     currentMeasurementError = []
     currentResidual = []
     currentReconError = []
-    container = Container(opts)
+    container = ResultsContainer(opts)
 
     x1 = x0
     d1 = A*x1
