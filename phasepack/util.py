@@ -1,23 +1,33 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-""" File util.py
+"""
+This module provides classes to be used as containers of options and partial
+results for the phase reconstruction algorithms.
 
-Last update: 15/08/2018
+Classes
+-------
 
-Usage:
+Options             A Class with options for all the reconstruction algorithms.
 
+ResultsContainer    A Class containing results and time progress of each
+                    iteration
+
+Python version based on MATLAB implementation by Rohan Chandra, Ziyuan Zhong,
+Justin Hontz, Val McCulloch, Christoph Studer, & Tom Goldstein.
+Copyright (c) University of Maryland, 2017
 """
 __version__ = "1.0.0"
 __author__ = 'Juan M. Bujjamer'
-__all__ = ['buildTestProblem']
 
 import numpy as np
 from scipy.sparse.linalg import LinearOperator, eigs, lsqr
 from numpy.random import multivariate_normal as mvnrnd
-import matplotlib.pyplot as plt
 
 class Options(object):
-    """ Option managing class. """
+    """ A Class to manage options  for the reconstruction algorithms.
+
+    It has two dictionaries as attributes, one for the general options,
+    used in all the algorithms and one with parameters only valid for
+    specific methods.
+    """
     def __init__(self, **kwargs):
 
         # Following options are relevant to every algorithm
@@ -140,42 +150,23 @@ class Options(object):
         for key, val in SpecDefaults[self.algorithm.lower()].items():
             setattr(self, key, val)
 
-
-    def getDefaultOpts(self):
-        """ Obtain and apply default options that relevant to each algorithm.
-        """
-        return
-
-    def getExtraOpts(self):
-        return
-
-    def applyOpts(self):
-        return
-
-class Container(object):
+class ResultsContainer(object):
     """
-    This function initializes and outputs containers for convergence info
-    according to user's choice. It is invoked in solve*.m.
+    Container for results and timing information of the algorithms.
 
-    Inputs:
-            opts(struct)              :  consists of options.
-    Outputs:
-            solveTimes(struct)        :  empty [] or initialized with
-                                         opts.maxIters x 1 zeros if
-                                         recordTimes.
-            measurementErrors(struct) :  empty [] or initialized with
-                                         opts.maxIters x 1 zeros if
-                                         recordMeasurementErrors.
-            reconErrors(struct)       :  empty [] or initialized with
-                                         opts.maxIters x 1 zeros if
-                                         recordReconErrors.
-            residuals(struct)         :  empty [] or initialized with
-                                         opts.maxIters x 1 zeros if
-                                         recordResiduals.
+    This Class contains and initializes outputs containers for convergence info
+    according to user's choice. Its inputs is the Options Class wich selects
+    which parameter are stored.
 
-    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-    Christoph Studer, & Tom Goldstein
-    Copyright (c) University of Maryland, 2017
+    solveTimes: array
+                contains the time required for each iteration.
+    measurementErrors: array
+                       actual errors.
+    reconErrors: array
+                 recordReconErrors.
+    residuals: array
+               recordResiduals.
+
     """
     def __init__(self, opts):
         self.solveTimes = None
@@ -274,7 +265,6 @@ class ConvMatrix(object):
     def __matmul__(self, x):
         """Implementation of left ConvMatrix multiplication, i.e. A@x"""
         return self.matrix.dot(x)
-        # return self.matrix.matvec(x)
 
     def __rmatmul__(self, x):
         """Implementation of right ConvMatrix multiplication, i.e. x@A"""
@@ -291,7 +281,6 @@ class ConvMatrix(object):
         v = (idx*b0**2).reshape(-1)
         def ymatvec(x):
             return 1/m*self.matrix.rmatvec(v*self.matrix.matvec(x))
-        # ymatvec = lambda x: 1/m*self.matrix.rmatvec(self.matrix.matvec(x))
         yfun = LinearOperator((self.n, self.n), matvec=ymatvec)
         [eval, x0] = eigs(yfun, k=1, which='LR',tol=1E-5)
         return x0

@@ -10,13 +10,14 @@ Usage:
 __version__ = "1.0.0"
 __author__ = 'Juan M. Bujjamer'
 __all__ = ['solvePhaseRetrieval']
-
+import numba
+from numba import jit
 import time
 import warnings
 import numpy as np
 from numpy.linalg import norm
 
-from phasepack.util import Options, Container, ConvMatrix, stopNow, displayVerboseOutput
+from phasepack.util import Options, ResultsContainer, ConvMatrix, stopNow, displayVerboseOutput
 from phasepack.initializers import initSpectral, initOptimalSpectral
 from phasepack.gdescent import gdOptions, gradientDescentSolver
 
@@ -148,7 +149,7 @@ def solveFienup(A, At, b0, x0, opts):
             sol = \argmin ||Ax-z||^2
        to get our new estimation x. We use Matlab built-in solver lsqr()
        for this least square problem.
-   (4) Impose temporal constraints on x(This step is ignored when there is
+   (4) ImposeResultsContainer constraints on x(This step is ignored when there is
    no constraints)
 
    For a detailed explanation, see the Fienup paper referenced below.
@@ -186,8 +187,8 @@ def solveFienup(A, At, b0, x0, opts):
     currentMeasurementError = []
 
     # Initialize vectors for recording convergence information
-    # [solveTimes,measurementErrors,reconErrors,residuals] = initializeContainers(opts);
-    container = Container(opts)
+    # [solveTimes,measurementErrors,reconErrors,residuals] = initializeResultsResultsContainers(opts);
+    container = ResultsContainer(opts)
 
 #     % Build a function handle for matlab's conjugate-gradient solver
 #     function y = Afun(x,transp_flag)
@@ -386,14 +387,16 @@ def solveTWF(A, At, b0, x0, opts):
         Eh  =  np.abs(y-Axabs**2) <= opts.alpha_h*Kt*Axabs/normx
         mask = Eub*Elb*Eh
         s = np.sum(mask)
+
+        @jit(nopython=True)
         def f(z):
             absz = np.abs(z)**2
             argument = absz-y*np.log(absz)
-            return (0.5/s)*np.sum(argument[mask])
+            return (0.5/s)*np.sum(argument*mask)
 
         def gradf(z):
             argument = np.abs(z)**2-y
-            return (1.0/s)*mask*(argument)/z.conjugate()
+            return (1.0/s)*mask*argument/z.conjugate()
 
         return f, gradf
 

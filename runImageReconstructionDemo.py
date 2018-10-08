@@ -1,45 +1,44 @@
 """
-#  runImageReconstructionDemo.py
-#
+This script will create phaseless measurements from a test image, and
+then recover the image using phase retrieval methods.  We now describe
+the details of the simple recovery problem that this script implements.
 
-# This script will create phaseless measurements from a test image, and
-# then recover the image using phase retrieval methods.  We now describe
-# the details of the simple recovery problem that this script implements.
-#
-#                         Recovery Problem
-# This script loads a test image, and converts it to grayscale.
-# Measurements of the image are then obtained by applying a linear operator
-# to the image, and computing the magnitude (i.e., removing the phase) of
-# the linear measurements.
-#
-#                       Measurement Operator
-# Measurement are obtained using a linear operator, called 'A', that
-# obtains masked Fourier measurements from an image.  Measurements are
-# created by multiplying the image (coordinate-wise) by a 'mask,' and then
-# computing the Fourier transform of the product.  There are 8 masks,
-# each of which is an array of binary (+1/-1) variables. The output of
-# the linear measurement operator contains the Fourier modes produced by
-# all 8 masks.  The measurement operator, 'A', is defined as a separate
-# function near the end of the file.  The adjoint/transpose of the
-# measurement operator is also defined, and is called 'At'.
-#
-#                         Data structures
-# PhasePack assumes that unknowns take the form of vectors (rather than 2d
-# images), and so we will represent our unknowns and measurements as a
-# 1D vector rather than 2D images.
-#
-#                      The Recovery Algorithm
-# The image is recovered by calling the method 'solvePhaseRetrieval', and
+                        Recovery Problem
+This script loads a test image, and converts it to grayscale.
+Measurements of the image are then obtained by applying a linear operator
+to the image, and computing the magnitude (i.e., removing the phase) of
+the linear measurements.
 
-# handing the measurement operator and linear measurements in as arguments.
-# A struct containing options is also handed to 'solvePhaseRetrieval'.
-# The entries in this struct specify which recovery algorithm is used.
-#
-# For more details, see the Phasepack user guide.
-#
-# PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-# Christoph Studer, & Tom Goldstein
-# Copyright (c) University of Maryland, 2017
+                      Measurement Operator
+Measurement are obtained using a linear operator, called 'A', that
+obtains masked Fourier measurements from an image.  Measurements are
+created by multiplying the image (coordinate-wise) by a 'mask,' and then
+computing the Fourier transform of the product.  There are 8 masks,
+each of which is an array of binary (+1/-1) variables. The output of
+the linear measurement operator contains the Fourier modes produced by
+all 8 masks.  The measurement operator, 'A', is defined as a separate
+function near the end of the file.  The adjoint/transpose of the
+measurement operator is also defined, and is called 'At'.
+
+                        Data structures
+PhasePack assumes that unknowns take the form of vectors (rather than 2d
+images), and so we will represent our unknowns and measurements as a
+1D vector rather than 2D images.
+
+                     The Recovery Algorithm
+The image is recovered by calling the method 'solvePhaseRetrieval', and
+handing the measurement operator and linear measurements in as arguments.
+A struct containing options is also handed to 'solvePhaseRetrieval'.
+The entries in this struct specify which recovery algorithm is used.
+
+For more details, see the Phasepack user guide.
+
+PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
+Christoph Studer, & Tom Goldstein
+Copyright (c) University of Maryland, 2017
+
+Python version by Juan M. Bujjamer.
+University of Buenos Aires, 2018.
 """
 # import cProfile
 from numpy.linalg import norm
@@ -120,7 +119,7 @@ opts = Options(algorithm = 'twf',      # Use the truncated Wirtinger flow
 
                                        # data pre-processing to generate an
                                        # initial starting point for the solver.
-               tol = 1E-2,             # The tolerance - make this smaller for
+               tol = 1E-3,            # The tolerance - make this smaller for
                                        # more accurate solutions, or larger
                                        # for faster runtimes.
                verbose = 2)            # Print out lots of information as the
