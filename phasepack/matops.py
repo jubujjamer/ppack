@@ -48,24 +48,24 @@ class ConvMatrix(object):
         self.m = self.shape[0]
         self.n = self.shape[1]
         self.matrix = LinearOperator(self.shape, matvec=mv, rmatvec=rmv)
-        self.checkAdjoint()
+        self.check_adjoint()
 
-    def validateInput(self, b0, opts):
+    def validate_input(self, b0, opts):
         assert (np.abs(b0) == b0).all, 'b must be real-valued and non-negative'
 
         if opts.customx0:
             assert np.shape(opts.customx0) == (n, 1), 'customx0 must be a column vector of length n'
 
-    def checkAdjoint(self):
+    def check_adjoint(self):
         """ Check that A and At are indeed ajoints of one another
         """
         y = np.random.randn(self.m);
         Aty = self.matrix.rmatvec(y)
         x = np.random.randn(self.n)
         Ax = self.matrix.matvec(x)
-        innerProduct1 = Ax.conjugate().T@y
-        innerProduct2 = x.conjugate().T@Aty
-        error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1)
+        inner_product1 = Ax.conjugate().T@y
+        inner_product2 = x.conjugate().T@Aty
+        error = np.abs(inner_product1-inner_product2)/np.abs(inner_product1)
         assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
         print('Both matrices were adjoints', error)
 
@@ -74,7 +74,7 @@ class ConvMatrix(object):
 
     def lsqr(self, b, tol, maxit, x0):
         """ Solution of the least squares problem for ConvMatrix
-        Gkp, opts.tol/100, opts.maxInnerIters, gk
+        Gkp, opts.tol/100, opts.max_inner_iters, gk
         """
         if b.shape[1]>0:
             b = b.reshape(-1)
@@ -117,7 +117,7 @@ class ConvMatrix(object):
         [eval, x0] = eigs(yfun, k=1, which='LR',tol=1E-5)
         return x0
 
-def stopNow(opts, currentTime, currentResid, currentReconError):
+def stop_now(opts, current_time, current_resid, current_recon_error):
     """
     Used in the main loop of many solvers (i.e.solve*.m) to
     check if the stopping condition(time, residual and reconstruction error)
@@ -130,19 +130,19 @@ def stopNow(opts, currentTime, currentResid, currentReconError):
 
     Inputs:
     opts(struct)                   :  consists of options. It is as
-                  defined in solverPhaseRetrieval.
+                  defined in solver_phase_retrieval.
                   See its header or User Guide
                   for details.
-    currentResid(real number)      :  Definition depends on the
+    current_resid(real number)      :  Definition depends on the
                   specific algorithm used see the
                   specific algorithm's file's
                   header for details.
-    currentReconError(real number) :  norm(xt-x)/norm(xt), where xt
+    current_recon_error(real number) :  norm(xt-x)/norm(xt), where xt
                   is the m x 1 true signal,
                   x is the n x 1 estimated signal
                   at current iteration.
     Outputs:
-    ifStop(boolean)                :  If the stopping condition has
+    if_stop(boolean)                :  If the stopping condition has
                   been met.
 
 
@@ -151,36 +151,36 @@ def stopNow(opts, currentTime, currentResid, currentReconError):
     Christoph Studer, & Tom Goldstein
     Copyright (c) University of Maryland, 2017
     """
-    if currentTime >= opts.maxTime:
+    if current_time >= opts.max_time:
         return True
     if len(opts.xt)>0:
-        assert currentReconError, 'If xt is provided, currentReconError must be provided.'
-        ifStop = currentReconError < opts.tol
+        assert current_recon_error, 'If xt is provided, current_recon_error must be provided.'
+        if_stop = current_recon_error < opts.tol
     else:
-        assert currentResid, 'If xt is not provided, currentResid must be provided.'
-        ifStop = currentResid < opts.tol
-    return ifStop
+        assert current_resid, 'If xt is not provided, current_resid must be provided.'
+        if_stop = current_resid < opts.tol
+    return if_stop
 
-def  displayVerboseOutput(iter, currentTime, currentResid=None, currentReconError=None, currentMeasurementError=None):
+def  display_verbose_output(iter, current_time, current_resid=None, current_recon_error=None, current_measurement_error=None):
     """ Prints out the convergence information at the current
     iteration. It will be invoked inside solve*.m if opts.verbose is set
     to be >=1.
 
     Inputs:
       iter(integer)                        : Current iteration number.
-      currentTime(real number)             : Elapsed time so far(clock starts
+      current_time(real number)             : Elapsed time so far(clock starts
                                              when the algorithm main loop
                                              started).
-      currentResid(real number)            : Definition depends on the
+      current_resid(real number)            : Definition depends on the
                                              specific algorithm used see the
                                              specific algorithm's file's
                                              header for details.
-      currentReconError(real number)       : relative reconstruction error.
+      current_recon_error(real number)       : relative reconstruction error.
                                              norm(xt-x)/norm(xt), where xt
                                              is the m x 1 true signal, x is
                                              the n x 1 estimated signal.
 
-      currentMeasurementError(real number) : norm(abs(Ax)-b0)/norm(b0), where
+      current_measurement_error(real number) : norm(abs(Ax)-b0)/norm(b0), where
                                              A is the m x n measurement
                                              matrix or function handle
                                              x is the n x 1 estimated signal
@@ -192,30 +192,30 @@ def  displayVerboseOutput(iter, currentTime, currentResid=None, currentReconErro
     Copyright (c) University of Maryland, 2017
     """
     print('Iteration = %d' % iter, end=' |')
-    print('IterationTime = %f' % currentTime, end=' |')
-    if currentResid:
-        print('Residual = %.1e' % currentResid, end=' |')
-    if currentReconError:
-        print('currentReconError = %.3f' %currentReconError, end=' |')
-    if currentMeasurementError:
-        print('MeasurementError = %.1e' %currentMeasurementError, end=' |')
+    print('iteration_time = %f' % current_time, end=' |')
+    if current_resid:
+        print('Residual = %.1e' % current_resid, end=' |')
+    if current_recon_error:
+        print('current_recon_error = %.3f' %current_recon_error, end=' |')
+    if current_measurement_error:
+        print('measurement_error = %.1e' %current_measurement_error, end=' |')
     print()
 
-def plotErrorConvergence(outs, opts):
+def plot_error_convergence(outs, opts):
     """
     This function plots some convergence curve according to the values of
     options in opts specified by user. It is used in all the test*.m scripts.
     Specifically,
-    If opts.recordReconErrors is true, it plots the convergence curve of
+    If opts.record_recon_errors is true, it plots the convergence curve of
     reconstruction error versus the number of iterations.
-    If opts.recordResiduals is true, it plots the convergence curve of
+    If opts.record_residuals is true, it plots the convergence curve of
     residuals versus the number of iterations.
     The definition of residuals is algorithm specific. For details, see the
     specific algorithm's solve*.m file.
-    If opts.recordMeasurementErrors is true, it plots the convergence curve
+    If opts.record_measurement_errors is true, it plots the convergence curve
     of measurement errors.
 
-    Inputs are as defined in the header of solvePhaseRetrieval.m.
+    Inputs are as defined in the header of solve_phase_retrieval.m.
     See it for details.
 
 
@@ -226,27 +226,27 @@ def plotErrorConvergence(outs, opts):
     """
 
     # Plot the error convergence curve
-    if opts.recordReconErrors:
+    if opts.record_recon_errors:
         plt.figure()
-        plt.semilogy(outs.reconErrors)
+        plt.semilogy(outs.recon_errors)
         plt.xlabel('Iterations')
-        plt.ylabel('ReconErrors')
+        plt.ylabel('recon_errors')
         plt.title('Convergence curve: %s' % opts.algorithm)
-    if opts.recordResiduals:
+    if opts.record_residuals:
         plt.figure()
         plt.semilogy(outs.residuals)
         plt.xlabel('Iterations')
         plt.ylabel('Residuals')
         plt.title('Convergence curve: %s' % opts.algorithm)
-    if opts.recordMeasurementErrors:
+    if opts.record_measurement_errors:
         plt.figure()
-        plt.semilogy(outs.measurementErrors);
+        plt.semilogy(outs.measurement_errors);
         plt.xlabel('Iterations');
-        plt.ylabel('MeasurementErros');
+        plt.ylabel('measurement_erros');
         plt.title('Convergence curve: %s' % opts.algorithm)
     plt.show()
 
-def plotRecoveredVSOriginal(x,xt):
+def plot_recovered_vs_original(x,xt):
     """Plots the real part of the recovered signal against
     the real part of the original signal.
     It is used in all the test*.m scripts.
@@ -263,14 +263,14 @@ def plotRecoveredVSOriginal(x,xt):
     plt.ylabel('True Signal')
     plt.show()
 
-def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Gaussian'):
+def build_test_problem(m, n, is_complex=True, is_non_negative_only=False, data_type='Gaussian'):
     """ Creates and outputs random generated data and measurements according to user's choice.
 
     Inputs:
       m(integer): number of measurements.
       n(integer): length of the unknown signal.
-      isComplex(boolean, default=true): whether the signal and measurement matrix is complex. isNonNegativeOnly(boolean, default=false): whether the signal is real and non-negative.
-      dataType(string, default='gaussian'): it currently supports ['gaussian', 'fourier'].
+      isComplex(boolean, default=true): whether the signal and measurement matrix is complex. is_non_negative_only(boolean, default=false): whether the signal is real and non-negative.
+      data_type(string, default='gaussian'): it currently supports ['gaussian', 'fourier'].
 
     Outputs:
       A: m x n measurement matrix/function handle.
@@ -278,15 +278,15 @@ def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Ga
       b0: m x 1 vector, measurements.
       At: A n x m matrix/function handle that is the transpose of A.
     """
-    if dataType.lower() == 'gaussian':
+    if data_type.lower() == 'gaussian':
         # mvnrnd(np.zeros(n), np.eye(n)/2, m)
-        A = mvnrnd(np.zeros(n), np.eye(n)/2, m) + isComplex*1j*mvnrnd(np.zeros(n), np.eye(n)/2, m)
+        A = mvnrnd(np.zeros(n), np.eye(n)/2, m) + is_complex*1j*mvnrnd(np.zeros(n), np.eye(n)/2, m)
         At = A.conjugate().T
-        x = mvnrnd(np.zeros(n), np.eye(n)/2) + isComplex*1j*mvnrnd(np.zeros(n), np.eye(n)/2)
+        x = mvnrnd(np.zeros(n), np.eye(n)/2) + is_complex*1j*mvnrnd(np.zeros(n), np.eye(n)/2)
         xt = x.reshape((-1, 1))
         b0 = np.abs(A@xt)
 
-    # elif dataType.lower() is 'fourier':
+    # elif data_type.lower() is 'fourier':
     # """Define the Fourier measurement operator.
     #    The operator 'A' maps an n-vector into an m-vector, then computes the fft on that m-vector to produce m measurements.
     # """
@@ -294,11 +294,11 @@ def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Ga
     #     rip = @(x,length) x(1:length);
     #     A = @(x) fft([x;zeros(m-n,1)]);
     #     At = @(x) rip(m*ifft(x),n);     % transpose of FM
-    #     xt = (mvnrnd(zeros(1, n), eye(n)/2) + isComplex * 1i * ...
+    #     xt = (mvnrnd(zeros(1, n), eye(n)/2) + is_complex * 1i * ...
     #         mvnrnd(zeros(1, n), eye(n)/2))';
     #     b0 = abs(A(xt)); % Compute the phaseless measurements
 
     else:
-        raise Exception('invalid dataType: %s', dataType);
+        raise Exception('invalid data_type: %s', data_type);
 
     return [A, xt, b0, At]

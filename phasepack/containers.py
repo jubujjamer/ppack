@@ -10,13 +10,11 @@ Options             A Class with options for all the reconstruction algorithms.
 ResultsContainer    A Class containing results and time progress of each
                     iteration
 
-
-Python version of the phasepack module by Juan M. Bujjamer, University of
-Buenos Aires, 2018. Based on MATLAB implementation by Rohan Chandra,
-Ziyuan Zhong, Justin Hontz, Val McCulloch, Christoph Studer,
-& Tom Goldstein.
-Copyright (c) University of Maryland, 2017
-
+Based on MATLAB implementation by Rohan Chandra, Ziyuan Zhong, Justin Hontz,
+Val McCulloch, Christoph Studer & Tom Goldstein.
+Copyright (c) University of Maryland, 2017.
+Python version of the phasepack module by Juan M. Bujjamer.
+University of Buenos Aires, 2018.
 """
 __version__ = "1.0.0"
 __author__ = 'Juan M. Bujjamer'
@@ -35,33 +33,33 @@ class Options(object):
     def __init__(self, **kwargs):
 
         # Following options are relevant to every algorithm
-        GeneralOptsDefault = {'algorithm': 'gerchbergsaxton',
-                          'initMethod': 'optimal',
-                          'isComplex': True,
-                          'isNonNegativeOnly': False,
-                          'maxIters':10000,
-                          'maxTime':300, # The maximum time the solver can run
+        general_opts_default = {'algorithm': 'gerchbergsaxton',
+                          'init_method': 'optimal',
+                          'is_complex': True,
+                          'is_non_negative_only': False,
+                          'max_iters':10000,
+                          'max_time':300, # The maximum time the solver can run
                                          # (unit: second).
                                          # Note: since elapsed time will be
                                          # checked at the end of each
                                          # iteration,the real time the solver
                                          # takes is the time of the iteration
-                                         # it goes beyond this maxTime.
+                                         # it goes beyond this max_time.
                           'tol': 1E-4,
                           'verbose': 0,  # Choose from [0, 1, 2]. If 0, printid
                                          # out nothing. If 1, print out status
                                          # information in the end. If 2, print
                                          # out status information every round.
-                          'recordTimes': True, # If the solver record time at
+                          'record_times': True, # If the solver record time at
                                          # each iteration.
-                          'recordMeasurementErrors': False, # If the solver
+                          'record_measurement_errors': False, # If the solver
                                          # compute and record measurement errors
                                          # i.e. norm(abs(A*x-b0))/norm(b0) at
                                          # each iteration.
-                          'recordReconErrors':False, # If the solver record
+                          'record_recon_errors':False, # If the solver record
                                          # reconstruction errors i.e.
                                          # norm(xt-x)/norm(x) at each iteration.
-                          'recordResiduals': True, # If the solver record
+                          'record_residuals': True, # If the solver record
                                          # residuals (metric varies acOBross
                                          # solvers) at each iteration.
                           'label': None, # Can be used to choose a label for
@@ -74,52 +72,52 @@ class Options(object):
                           'xt': None,      # The true signal. If it is provided,
                                          # reconstruction error will be computed
                                          # and used for stopping condition.
-                          'customAlgorithm': None, # Custom algorithm provided
+                          'custom_algorithm': None, # Custom algorithm provided
                                          # by user.
                           'customx0': None, # Custom initializer provided by
                                          # user.
-                          'initAngle': None # When the angle initializer is used
+                          'init_angle': None # When the angle initializer is used
                                          # you must specify the angle between
                                          # the true signal and the initializer.
                           }
 
-        SpecDefaults = {'custom': {},
+        spec_defaults = {'custom': {},
                         'amplitudeflow': {
-                            'searchMethod': 'steepestDescent', # Specifies how
+                            'search_method': 'steepest_descent', # Specifies how
                                          # search direction for line search is
                                          # chosen upon each iteration
-                            'betaChoice': [] # Specifies how beta value is chosen (only used when search method is NCG)
+                            'beta_choice': [] # Specifies how beta value is chosen (only used when search method is NCG)
                             },
                         'coordinatedescent': {
-                            'indexChoice': 'greedy' #the rule for picking up index, choose from 'cyclic','random' ,'greedy'].
+                            'index_choice': 'greedy' #the rule for picking up index, choose from 'cyclic','random' ,'greedy'].
                             },
                         'fienup': {
-                            'FienupTuning': 0.5, # Tunning parameter for Gerchberg-Saxton algorithm. It influences the update of the fourier domain value at each iteration.
-                            'maxInnerIters': 10 # The max number of iterations the inner-loop solver  will have.
+                            'fienup_tuning': 0.5, # Tunning parameter for Gerchberg-Saxton algorithm. It influences the update of the fourier domain value at each iteration.
+                            'max_inner_iters': 10 # The max number of iterations the inner-loop solver  will have.
                             },
 
                         'gerchbergsaxton': {
-                            'maxInnerIters': 10 # The max number of iterations  the inner-loop solver will have.
+                            'max_inner_iters': 10 # The max number of iterations  the inner-loop solver will have.
                             },
                         'kaczmarz': {
-                            'indexChoice': 'cyclic' # the rule for picking up index, choose from ['cyclic','random']
+                            'index_choice': 'cyclic' # the rule for picking up index, choose from ['cyclic','random']
                             },
                         'phasemax': {},
                         'phaselamp': {},
                         'phaselift': {
-                            'regularizationPara' : 0.1 # This controls the weight of trace(X), where X=xx' in the objective function (see phaseLift paper for details)
+                            'regularization_para' : 0.1 # This controls the weight of trace(X), where X=xx' in the objective function (see phaseLift paper for details)
                             },
                         'raf': {
-                            'reweightPeriod': 20, # The maximum number of iterations that are allowed to occurr between reweights of objective function
-                            'searchMethod': 'steepestDescent', # Specifies how search direction for line search is chosen upon each iteration
-                            'betaChoice': 'HS' #  Specifies how beta value is chosen (only used when search
+                            'reweight_period': 20, # The maximum number of iterations that are allowed to occurr between reweights of objective function
+                            'search_method': 'steepest_descent', # Specifies how search direction for line search is chosen upon each iteration
+                            'beta_choice': 'HS' #  Specifies how beta value is chosen (only used when search
                             # method is NCG). Used only for NCG solver.
                         },
                         'rwf': {
                             'eta': 0.9, # Constant used to reweight objective function (see RWF paper for details)
-                            'reweightPeriod': 20, # The maximum number of iterations that are allowed to occurr between reweights of objective function
-                            'searchMethod': 'steepestDescent', # Specifies how search direction for line search is chosen upon each iteration
-                            'betaChoice': 'HS' # Specifies how beta value is chosen (only used when search method is NCG) Used only for NCG solver
+                            'reweight_period': 20, # The maximum number of iterations that are allowed to occurr between reweights of objective function
+                            'search_method': 'steepest_descent', # Specifies how search direction for line search is chosen upon each iteration
+                            'beta_choice': 'HS' # Specifies how beta value is chosen (only used when search method is NCG) Used only for NCG solver
                         },
                         'sketchycgm': {
                             'rank': 1, # rank parameter. For details see Algorithm1 in the sketchyCGM paper.
@@ -127,31 +125,31 @@ class Options(object):
                             },
                         'taf': {
                             'gamma': 0.7, # Constant used to truncate objective function (see paper for details). The maximum number of iterations that are allowed to occurr between truncations of objective function
-                            'truncationPeriod': 20, # Specifies how search direction for line search is chosen upon each iteration
-                            'searchMethod': 'steepestDescent',
-                            'betaChoice': 'HS' # Specifies how beta value is chosen (only used when search method is NCG)Used only for NCG solver
+                            'truncation_period': 20, # Specifies how search direction for line search is chosen upon each iteration
+                            'search_method': 'steepest_descent',
+                            'beta_choice': 'HS' # Specifies how beta value is chosen (only used when search method is NCG)Used only for NCG solver
                             },
                         'twf': {
-                            'truncationPeriod': 20, # The maximum number of iterations that are allowed to occur between truncations of objective function
-                            'searchMethod': 'steepestDescent', # Specifies how search direction for line search is chosen upon each iteration
-                            'betaChoice': 'HS', # Specifies how beta value is chosen (only used when search method is NCG). Used only for NCG solver.
+                            'truncation_period': 20, # The maximum number of iterations that are allowed to occur between truncations of objective function
+                            'search_method': 'steepest_descent', # Specifies how search direction for line search is chosen upon each iteration
+                            'beta_choice': 'HS', # Specifies how beta value is chosen (only used when search method is NCG). Used only for NCG solver.
                             # Truncation parameters. These default values are defined as in the proposing paper for the case where line search is used.
                             'alpha_lb': 0.1,
                             'alpha_ub': 5,
                             'alpha_h': 6
                             },
                         'wirtflow': {
-                            'searchMethod': 'steepestDescent', # Specifies how search direction for line search is chosen upon each iteration
-                            'betaChoice': 'HS' # Specifies how beta value is chosen (only used when search method is NCG). Used only for NCG solver.
+                            'search_method': 'steepest_descent', # Specifies how search direction for line search is chosen upon each iteration
+                            'beta_choice': 'HS' # Specifies how beta value is chosen (only used when search method is NCG). Used only for NCG solver.
                             }
                         }
-        for key, val in GeneralOptsDefault.items():
+        for key, val in general_opts_default.items():
             if key in kwargs.keys():
                 setattr(self, key, kwargs[key])
             else:
                 setattr(self, key, val)
 
-        for key, val in SpecDefaults[self.algorithm.lower()].items():
+        for key, val in spec_defaults[self.algorithm.lower()].items():
             setattr(self, key, val)
 
 class ResultsContainer(object):
@@ -162,72 +160,72 @@ class ResultsContainer(object):
     according to user's choice. Its inputs is the Options Class wich selects
     which parameter are stored.
 
-    solveTimes: array
+    solve_times: array
                 contains the time required for each iteration.
-    measurementErrors: array
+    measurement_errors: array
                        actual errors.
-    reconErrors: array
-                 recordReconErrors.
+    recon_errors: array
+                 record_recon_errors.
     residuals: array
-               recordResiduals.
+               record_residuals.
 
     """
     def __init__(self, opts):
-        self.solveTimes = list()
-        self.measurementErrors = list()
-        self.reconErrors = list()
+        self.solve_times = list()
+        self.measurement_errors = list()
+        self.recon_errors = list()
         self.residuals = list()
-        self.iterationCount = list()
+        self.iteration_count = list()
 
-        if opts.recordTimes:
-            self.solveTimes = np.zeros([])
-        if opts.recordMeasurementErrors:
-            self.measurementErrors = np.zeros([])
-        if opts.recordReconErrors:
-            self.reconErrors = np.zeros([])
-        if opts.recordResiduals:
+        if opts.record_times:
+            self.solve_times = np.zeros([])
+        if opts.record_measurement_errors:
+            self.measurement_errors = np.zeros([])
+        if opts.record_recon_errors:
+            self.recon_errors = np.zeros([])
+        if opts.record_residuals:
             self.residuals = np.zeros([])
 
-    def lastTime(self):
-        if len(self.solveTimes) > 0:
-            return self.solveTimes[-1]
+    def last_time(self):
+        if len(self.solve_times) > 0:
+            return self.solve_times[-1]
         else:
             return None
 
-    def lastMeasError(self):
-        if len(self.measurementErrors) > 0:
-            return self.measurementErrors[-1]
+    def last_meas_error(self):
+        if len(self.measurement_errors) > 0:
+            return self.measurement_errors[-1]
         else:
             return None
 
-    def lastReconError(self):
-        if len(self.reconErrors) > 0:
-            return self.reconErrors[-1]
+    def last_recon_error(self):
+        if len(self.recon_errors) > 0:
+            return self.recon_errors[-1]
         else:
             return None
 
-    def lastResidual(self):
+    def last_residual(self):
         if len(self.residuals) > 0:
             return self.residuals[-1]
         else:
             return None
 
-    def lastIterationCount(self):
-        if len(self.iterationCount) > 0:
-            return self.iterationCount[-1]
+    def last_iteration_count(self):
+        if len(self.iteration_count) > 0:
+            return self.iteration_count[-1]
         else:
             return None
 
-    def appendRecordTime(self, recordTime):
-        self.solveTimes = np.append(self.solveTimes, recordTime)
+    def append_record_time(self, record_time):
+        self.solve_times = np.append(self.solve_times, record_time)
 
-    def appendMeasurementError(self, measurementError):
-        self.measurementErrors = np.append(self.measurementErrors, measurementError)
+    def append_measurement_error(self, measurement_error):
+        self.measurement_errors = np.append(self.measurement_errors, measurement_error)
 
-    def appendReconError(self, reconError):
-        self.reconErrors = np.append(self.reconErrors, reconError)
+    def append_recon_error(self, recon_error):
+        self.recon_errors = np.append(self.recon_errors, recon_error)
 
-    def appendResidual(self, residual):
+    def append_residual(self, residual):
         self.residuals = np.append(self.residuals, residual)
 
 class ConvMatrix(object):
@@ -256,18 +254,18 @@ class ConvMatrix(object):
         self.m = self.shape[0]
         self.n = self.shape[1]
         self.matrix = LinearOperator(self.shape, matvec=mv, rmatvec=rmv)
-        self.checkAdjoint()
+        self.check_adjoint()
 
-    def checkAdjoint(self):
+    def check_adjoint(self):
         """ Check that A and At are indeed ajoints of one another
         """
         y = np.random.randn(self.m);
         Aty = self.matrix.rmatvec(y)
         x = np.random.randn(self.n)
         Ax = self.matrix.matvec(x)
-        innerProduct1 = Ax.conjugate().T@y
-        innerProduct2 = x.conjugate().T@Aty
-        error = np.abs(innerProduct1-innerProduct2)/np.abs(innerProduct1)
+        inner_product1 = Ax.conjugate().T@y
+        inner_product2 = x.conjugate().T@Aty
+        error = np.abs(inner_product1-inner_product2)/np.abs(inner_product1)
         assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
         print('Both matrices were adjoints', error)
 
@@ -276,7 +274,7 @@ class ConvMatrix(object):
 
     def lsqr(self, b, tol, maxit, x0):
         """ Solution of the least squares problem for ConvMatrix
-        Gkp, opts.tol/100, opts.maxInnerIters, gk
+        Gkp, opts.tol/100, opts.max_inner_iters, gk
         """
         if b.shape[1]>0:
             b = b.reshape(-1)
@@ -319,7 +317,7 @@ class ConvMatrix(object):
         [eval, x0] = eigs(yfun, k=1, which='LR',tol=1E-5)
         return x0
 
-def stopNow(opts, currentTime, currentResid, currentReconError):
+def stop_now(opts, current_time, current_resid, current_recon_error):
     """
     Used in the main loop of many solvers (i.e.solve*.m) to
     check if the stopping condition(time, residual and reconstruction error)
@@ -332,19 +330,19 @@ def stopNow(opts, currentTime, currentResid, currentReconError):
 
     Inputs:
     opts(struct)                   :  consists of options. It is as
-                  defined in solverPhaseRetrieval.
+                  defined in solver_phase_retrieval.
                   See its header or User Guide
                   for details.
-    currentResid(real number)      :  Definition depends on the
+    current_resid(real number)      :  Definition depends on the
                   specific algorithm used see the
                   specific algorithm's file's
                   header for details.
-    currentReconError(real number) :  norm(xt-x)/norm(xt), where xt
+    current_recon_error(real number) :  norm(xt-x)/norm(xt), where xt
                   is the m x 1 true signal,
                   x is the n x 1 estimated signal
                   at current iteration.
     Outputs:
-    ifStop(boolean)                :  If the stopping condition has
+    if_stop(boolean)                :  If the stopping condition has
                   been met.
 
 
@@ -353,37 +351,37 @@ def stopNow(opts, currentTime, currentResid, currentReconError):
     Christoph Studer, & Tom Goldstein
     Copyright (c) University of Maryland, 2017
     """
-    if currentTime >= opts.maxTime:
+    if current_time >= opts.max_time:
         return True
     if opts.xt:
-        assert currentReconError, 'If xt is provided, currentReconError must be provided.'
-        ifStop = currentReconError < opts.tol
+        assert current_recon_error, 'If xt is provided, current_recon_error must be provided.'
+        if_stop = current_recon_error < opts.tol
     else:
-        assert currentResid, 'If xt is not provided, currentResid must be provided.'
-        ifStop = currentResid < opts.tol
-    return ifStop
+        assert current_resid, 'If xt is not provided, current_resid must be provided.'
+        if_stop = current_resid < opts.tol
+    return if_stop
 
-def  displayVerboseOutput(iter, currentTime, currentResid=None,
-                          currentReconError=None, currentMeasurementError=None):
+def  display_verbose_output(iter, current_time, current_resid=None,
+                          current_recon_error=None, current_measurement_error=None):
     """ Prints out the convergence information at the current
     iteration. It will be invoked inside solve*.m if opts.verbose is set
     to be >=1.
 
     Inputs:
       iter(integer)                        : Current iteration number.
-      currentTime(real number)             : Elapsed time so far(clock starts
+      current_time(real number)             : Elapsed time so far(clock starts
                                              when the algorithm main loop
                                              started).
-      currentResid(real number)            : Definition depends on the
+      current_resid(real number)            : Definition depends on the
                                              specific algorithm used see the
                                              specific algorithm's file's
                                              header for details.
-      currentReconError(real number)       : relative reconstruction error.
+      current_recon_error(real number)       : relative reconstruction error.
                                              norm(xt-x)/norm(xt), where xt
                                              is the m x 1 true signal, x is
                                              the n x 1 estimated signal.
 
-      currentMeasurementError(real number) : norm(abs(Ax)-b0)/norm(b0), where
+      current_measurement_error(real number) : norm(abs(Ax)-b0)/norm(b0), where
                                              A is the m x n measurement
                                              matrix or function handle
                                              x is the n x 1 estimated signal
@@ -394,32 +392,32 @@ def  displayVerboseOutput(iter, currentTime, currentResid=None,
     Christoph Studer, & Tom Goldstein
     Copyright (c) University of Maryland, 2017
     """
-    print(currentMeasurementError)
+    print(current_measurement_error)
     print('Iteration = %d' % iter, end=' |')
-    print('IterationTime = %f' % currentTime, end=' |')
-    if currentResid:
-        print('Residual = %.1e' % currentResid, end=' |')
-    if currentReconError:
-        print('currentReconError = %.3f' %currentReconError, end=' |')
-    if currentMeasurementError:
-        print('MeasurementError = %.1e' %currentMeasurementError, end=' |')
+    print('iteration_time = %f' % current_time, end=' |')
+    if current_resid:
+        print('Residual = %.1e' % current_resid, end=' |')
+    if current_recon_error:
+        print('current_recon_error = %.3f' %current_recon_error, end=' |')
+    if current_measurement_error:
+        print('measurement_error = %.1e' %current_measurement_error, end=' |')
     print()
 
-def plotErrorConvergence(outs, opts):
+def plot_error_convergence(outs, opts):
     """
     This function plots some convergence curve according to the values of
     options in opts specified by user. It is used in all the test*.m scripts.
     Specifically,
-    If opts.recordReconErrors is true, it plots the convergence curve of
+    If opts.record_recon_errors is true, it plots the convergence curve of
     reconstruction error versus the number of iterations.
-    If opts.recordResiduals is true, it plots the convergence curve of
+    If opts.record_residuals is true, it plots the convergence curve of
     residuals versus the number of iterations.
     The definition of residuals is algorithm specific. For details, see the
     specific algorithm's solve*.m file.
-    If opts.recordMeasurementErrors is true, it plots the convergence curve
+    If opts.record_measurement_errors is true, it plots the convergence curve
     of measurement errors.
 
-    Inputs are as defined in the header of solvePhaseRetrieval.m.
+    Inputs are as defined in the header of solve_phase_retrieval.m.
     See it for details.
 
 
@@ -430,27 +428,27 @@ def plotErrorConvergence(outs, opts):
     """
 
     # Plot the error convergence curve
-    if opts.recordReconErrors:
+    if opts.record_recon_errors:
         plt.figure()
-        plt.semilogy(outs.reconErrors)
+        plt.semilogy(outs.recon_errors)
         plt.xlabel('Iterations')
-        plt.ylabel('ReconErrors')
+        plt.ylabel('recon_errors')
         plt.title('Convergence curve: %s' % opts.algorithm)
-    if opts.recordResiduals:
+    if opts.record_residuals:
         plt.figure()
         plt.semilogy(outs.residuals)
         plt.xlabel('Iterations')
         plt.ylabel('Residuals')
         plt.title('Convergence curve: %s' % opts.algorithm)
-    if opts.recordMeasurementErrors:
+    if opts.record_measurement_errors:
         plt.figure()
-        plt.semilogy(outs.measurementErrors);
+        plt.semilogy(outs.measurement_errors);
         plt.xlabel('Iterations');
-        plt.ylabel('MeasurementErros');
+        plt.ylabel('measurement_erros');
         plt.title('Convergence curve: %s' % opts.algorithm)
     plt.show()
 
-def plotRecoveredVSOriginal(x,xt):
+def plot_recovered_vs_original(x,xt):
     """Plots the real part of the recovered signal against
     the real part of the original signal.
     It is used in all the test*.m scripts.
@@ -467,14 +465,14 @@ def plotRecoveredVSOriginal(x,xt):
     plt.ylabel('True Signal')
     plt.show()
 
-def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Gaussian'):
+def build_test_problem(m, n, is_complex=True, is_non_negative_only=False, data_type='Gaussian'):
     """ Creates and outputs random generated data and measurements according to user's choice.
 
     Inputs:
       m(integer): number of measurements.
       n(integer): length of the unknown signal.
-      isComplex(boolean, default=true): whether the signal and measurement matrix is complex. isNonNegativeOnly(boolean, default=false): whether the signal is real and non-negative.
-      dataType(string, default='gaussian'): it currently supports ['gaussian', 'fourier'].
+      is_complex(boolean, default=true): whether the signal and measurement matrix is complex. is_non_negative_only(boolean, default=false): whether the signal is real and non-negative.
+      data_type(string, default='gaussian'): it currently supports ['gaussian', 'fourier'].
 
     Outputs:
       A: m x n measurement matrix/function handle.
@@ -482,15 +480,15 @@ def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Ga
       b0: m x 1 vector, measurements.
       At: A n x m matrix/function handle that is the transpose of A.
     """
-    if dataType.lower() == 'gaussian':
+    if data_type.lower() == 'gaussian':
         # mvnrnd(np.zeros(n), np.eye(n)/2, m)
-        A = mvnrnd(np.zeros(n), np.eye(n)/2, m) + isComplex*1j*mvnrnd(np.zeros(n), np.eye(n)/2, m)
+        A = mvnrnd(np.zeros(n), np.eye(n)/2, m) + is_complex*1j*mvnrnd(np.zeros(n), np.eye(n)/2, m)
         At = A.conjugate().T
-        x = mvnrnd(np.zeros(n), np.eye(n)/2) + isComplex*1j*mvnrnd(np.zeros(n), np.eye(n)/2)
+        x = mvnrnd(np.zeros(n), np.eye(n)/2) + is_complex*1j*mvnrnd(np.zeros(n), np.eye(n)/2)
         xt = x.reshape((-1, 1))
         b0 = np.abs(A@xt)
 
-    # elif dataType.lower() is 'fourier':
+    # elif data_type.lower() is 'fourier':
     # """Define the Fourier measurement operator.
     #    The operator 'A' maps an n-vector into an m-vector, then computes the fft on that m-vector to produce m measurements.
     # """
@@ -498,11 +496,11 @@ def buildTestProblem(m, n, isComplex=True, isNonNegativeOnly=False, dataType='Ga
     #     rip = @(x,length) x(1:length);
     #     A = @(x) fft([x;zeros(m-n,1)]);
     #     At = @(x) rip(m*ifft(x),n);     % transpose of FM
-    #     xt = (mvnrnd(zeros(1, n), eye(n)/2) + isComplex * 1i * ...
+    #     xt = (mvnrnd(zeros(1, n), eye(n)/2) + is_complex * 1i * ...
     #         mvnrnd(zeros(1, n), eye(n)/2))';
     #     b0 = abs(A(xt)); % Compute the phaseless measurements
 
     else:
-        raise Exception('invalid dataType: %s', dataType);
+        raise Exception('invalid data_type: %s', data_type);
 
     return [A, xt, b0, At]

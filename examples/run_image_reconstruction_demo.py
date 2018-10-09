@@ -26,18 +26,17 @@ images), and so we will represent our unknowns and measurements as a
 1D vector rather than 2D images.
 
                      The Recovery Algorithm
-The image is recovered by calling the method 'solvePhaseRetrieval', and
+The image is recovered by calling the method 'solve_phase_retrieval', and
 handing the measurement operator and linear measurements in as arguments.
-A struct containing options is also handed to 'solvePhaseRetrieval'.
+A struct containing options is also handed to 'solve_phase_retrieval'.
 The entries in this struct specify which recovery algorithm is used.
 
 For more details, see the Phasepack user guide.
 
-PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-Christoph Studer, & Tom Goldstein
-Copyright (c) University of Maryland, 2017
-
-Python version by Juan M. Bujjamer.
+Based on MATLAB implementation by Rohan Chandra, Ziyuan Zhong, Justin Hontz,
+Val McCulloch, Christoph Studer & Tom Goldstein.
+Copyright (c) University of Maryland, 2017.
+Python version of the phasepack module by Juan M. Bujjamer.
 University of Buenos Aires, 2018.
 """
 # import cProfile
@@ -50,7 +49,7 @@ from numpy.random import rand
 import time
 from phasepack.containers import Options
 from phasepack.matops import ConvMatrix
-from phasepack.solvers import solvePhaseRetrieval
+from phasepack.retrieval import Retrieval
 import scipy
 #########################################################################
 # Measurement Operator Definition
@@ -116,7 +115,7 @@ A = ConvMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks,
 opts = Options(algorithm = 'twf',      # Use the truncated Wirtinger flow
                                        # method to solve the retrieval
                                        # problem. Try changing to 'Fienup'.
-               initMethod = 'optimal', # Use a spectral method with optimized
+               init_method = 'optimal', # Use a spectral method with optimized
 
                                        # data pre-processing to generate an
                                        # initial starting point for the solver.
@@ -126,14 +125,16 @@ opts = Options(algorithm = 'twf',      # Use the truncated Wirtinger flow
                verbose = 2)            # Print out lots of information as the
                                        # solver runs (set this to 1 or 0 for
                                        # less output)
+# Create an instance of the phase retrieval class, which manages initializers
+# and selection of solvers acording to the options provided.
+retrieval = Retrieval(A, b, opts)
 print('Running %s algorithm\n' % opts.algorithm)
 # Call the solver using the measurement operator 'A', its adjoint 'At', the
 # measurements 'b', the length of the signal to be recovered, and the
 # options.  Note, this method can accept either function handles or
-# matrices as measurement operators.   Here, we use function handles
+# matrices as measurement operators. Here, we use function handles
 # because we rely on the FFT to do things fast.
-x, outs, opts = solvePhaseRetrieval(A=A, b0=b, n=x.size, opts=opts)
-
+x, outs, opts = retrieval.solve_phase_retrieval()
 # Convert the vector output back into a 2D image
 recovered_image = x.reshape(numrows, numcols)
 
@@ -144,15 +145,12 @@ rotation = (recovered_image.conjugate().T@image)/\
             np.abs(recovered_image.conjugate().T@image)
 print(rotation.shape)
 recovered_image = np.real(recovered_image)
-
-
-
 # Print some useful info to the console
 print('Image recovery required %d iterations (%f secs)\n'
-      % (outs.iterationCount, outs.solveTimes[-1]))
+      % (outs.iteration_count, outs.solve_times[-1]))
 # Print some useful info to the console
 print('Image recovery required %d iterations (%f secs)\n' %
-      (outs.iterationCount, outs.solveTimes[-1]))
+      (outs.iteration_count, outs.solve_times[-1]))
 # Plot results
 fig, axes = plt.subplots(1, 3)
 # Plot the original image

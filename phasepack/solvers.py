@@ -5,8 +5,13 @@ retrieval problem.
 Functions:
 ----------
 
-checkAdjoint:       Checks wether A and At are transpose conjugates.
+solve_fienup:       Checks wether A and At are transpose conjugates.
 
+Based on MATLAB implementation by Rohan Chandra, Ziyuan Zhong, Justin Hontz,
+Val McCulloch, Christoph Studer & Tom Goldstein.
+Copyright (c) University of Maryland, 2017.
+Python version of the phasepack module by Juan M. Bujjamer.
+University of Buenos Aires, 2018.
 """
 from numba import jit
 import time
@@ -14,52 +19,10 @@ import warnings
 import numpy as np
 from numpy.linalg import norm
 
-from phasepack.containers import Options, ResultsContainer, displayVerboseOutput, stopNow
-from phasepack.matops import ConvMatrix
+from phasepack.containers import display_verbose_output, stop_now, ResultsContainer
+from phasepack.math import gd_options, gradient_descent_solver
 
-from phasepack.initializers import initSpectral, initOptimalSpectral
-from phasepack.gdescent import gdOptions, gradientDescentSolver
-
-
-def initX(A, b0, opts, At=None):
-    chosen_opt = opts.initMethod.lower()
-    if chosen_opt == 'truncatedspectral' or chosen_opt == 'truncated':
-        return initSpectral(A=A, At=At, b0=b0, isTruncated=True,
-                            isScaled=True, verbose=opts.verbose)
-    elif chosen_opt == 'spectral':
-        return initSpectral(A=A, At=At, b0=b0, isTruncated=False,
-                            isScaled=True, verbose=opts.verbose)
-    elif chosen_opt == 'optimal' or chosen_opt == 'optimalspectral':
-            return initOptimalSpectral(A=A, At=At, b0=b0, isScaled=True,
-                                       verbose=opts.verbose)
-#    elif chosen_opt == 'amplitudespectral' or chosen_opt == 'amplitude':
-#        return initAmplitude(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
-#    elif chosen_opt == 'weightedspectral' or chosen_opt == 'weighted':
-#        return initWeighted(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
-#    elif chosen_opt == 'orthogonalspectral' or chosen_opt == 'orthogonal':
-#        return initOrthogonal(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
-#    elif chosen_opt == 'angle':
-#        return initAngle(xt=opts.xt, angle=opts.initAngle)
-    # case 'angle'
-    #     assert(isfield(opts,'xt'),'The true solution, opts.xt, must be specified to use the angle initializer.')
-    #     assert(isfield(opts,'initAngle'),'An angle, opts.initAngle, must be specified (in radians) to use the angle initializer.')
-    #     x0 = initAngle(opts.xt, opts.initAngle);
-    # case 'custom'
-    #     x0 = opts.customx0;
-    else:
-        raise Exception('Unknown initialization option.')
-    return x0
-
-def optsCustomAlgorithm(A, At, b0, x0, opts):
-    return
-
-def solveAmplitudeFlow(A, At, b0, x0, opts):
-    return
-
-def solveCoordinateDescent(A, At, b0, x0, opts):
-    return
-
-def solveFienup(A, At, b0, x0, opts):
+def solve_fienup(A, At, b0, x0, opts):
     """ Solver for Fienup algorithm.
 
     Parameters:
@@ -71,7 +34,7 @@ def solveFienup(A, At, b0, x0, opts):
     b0:   m x 1 real,non-negative vector consists of all the measurements.
     x0:   n x 1 vector. It is the initial guess of the unknown signal x.
     opts: A struct consists of the options for the algorithm. For details,
-          see header in solvePhaseRetrieval.m or the User Guide.
+          see header in solve_phase_retrieval.m or the User Guide.
 
     Note: When a function handle is used, the
     value of 'At' (a function handle for the adjoint of 'A') must be
@@ -81,9 +44,9 @@ def solveFienup(A, At, b0, x0, opts):
     --------
     sol:  n x 1 vector. It is the estimated signal.
     outs: A struct consists of the convergence info. For details,
-          see header in solvePhaseRetrieval.m or the User Guide.
+          see header in solve_phase_retrieval.m or the User Guide.
 
-    See the script 'testFienup.m' for an example of proper usage of this
+    See the script 'test_fienup.m' for an example of proper usage of this
     function.
 
     Notations:
@@ -112,7 +75,7 @@ def solveFienup(A, At, b0, x0, opts):
                 sol = \argmin ||Ax-z||^2
     to get our new estimation x. We use Matlab built-in solver lsqr()
     for this least square problem.
-    (4) ImposeResultsContainer constraints on x(This step is ignored when there is
+    (4) impose_results_container constraints on x(This step is ignored when there is
     no constraints)
 
     For a detailed explanation, see the Fienup paper referenced below.
@@ -130,20 +93,20 @@ def solveFienup(A, At, b0, x0, opts):
     Copyright (c) University of Maryland, 2017
     """
 
-    def validateOptions(opts):
+    def validate_options(opts):
         try:
-            float(opts.FienupTuning)
+            float(opts.fienup_tuning)
         except:
-            raise Exception("%s should be a number" % opts.FienupTuning)
+            raise Exception("%s should be a number" % opts.fienup_tuning)
     # Initialization
     gk = x0                      # Initial Guess, corresponds to g_k in the paper
     gkp = x0                     # corresponds to g_k' in the paper
     gknew = x0                   # corresponds to g_k+1 in the paper
-    beta = opts.FienupTuning     # GS tuning parameter
+    beta = opts.fienup_tuning     # GS tuning parameter
     # Initialize vectors for recording convergence information
     container = ResultsContainer(opts)
-    startTime = time.time()
-    for iter in range(opts.maxIters):
+    start_time = time.time()
+    for iter in range(opts.max_iters):
         Ax = A*gk # Intermediate value to save repetitive computation
         Gkp = b0*Ax/np.abs(Ax) # This is MATLAB's definition of complex sign
         #-----------------------------------------------------------------------
@@ -157,33 +120,33 @@ def solveFienup(A, At, b0, x0, opts):
             # Compute optimal rotation
             alpha = (x.T@xt)/(x.T@x)
             x = alpha*x
-            currentReconError = norm(x-xt)/norm(xt);
-            if opts.recordReconErrors:
-                container.appendReconError(currentReconError)
+            current_recon_error = norm(x-xt)/norm(xt);
+            if opts.record_recon_errors:
+                container.append_recon_error(current_recon_error)
 
-        if not opts.xt or opts.recordResiduals:
-            currentResid = norm(A.hmul((Ax-Gkp)))/norm(Gkp)
+        if not opts.xt or opts.record_residuals:
+            current_resid = norm(A.hmul((Ax-Gkp)))/norm(Gkp)
 
-        if opts.recordResiduals:
-            container.appendResidual(currentResid)
+        if opts.record_residuals:
+            container.append_residual(current_resid)
 
-        currentTime = time.time()-startTime  #Record elapsed time so far
-        if opts.recordTimes:
-            container.appendRecordTime(currentTime)
+        current_time = time.time()-start_time  #Record elapsed time so far
+        if opts.record_times:
+            container.append_record_time(current_time)
 
-        if opts.recordMeasurementErrors:
-            currentMeasurementError = norm(np.abs(A*gk)-b0)/norm(b0)
-            container.appendMeasurementError(currentMeasurementError)
+        if opts.record_measurement_errors:
+            current_measurement_error = norm(np.abs(A*gk)-b0)/norm(b0)
+            container.append_measurement_error(current_measurement_error)
         # Display verbose output if specified
         if opts.verbose == 2:
-            displayVerboseOutput(iter, container.lastTime(),
-                               container.lastResidual(),
-                               container.lastReconError(),
-                               container.lastMeasError())
+            display_verbose_output(iter, container.last_time(),
+                               container.last_residual(),
+                               container.last_recon_error(),
+                               container.last_meas_error())
         #  Test stopping criteria.
-        if stopNow(opts, container.lastTime(),
-                         container.lastResidual(),
-                         container.lastReconError()):
+        if stop_now(opts, container.last_time(),
+                         container.last_residual(),
+                         container.last_recon_error()):
             break
         # Solve the least-squares problem
         # gkp = \argmin ||Ax-Gkp||^2.
@@ -191,12 +154,12 @@ def solveFienup(A, At, b0, x0, opts):
         # gkp = inv(A)*Gkp
         # If A is a fourier transform( and measurements are not oversampled i.e. m==n),
         # gkp = inverse fourier transform of Gkp
-        gkp = A.lsqr(Gkp, opts.tol, opts.maxInnerIters, gk)
-        # gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.maxInnerIters,[],[],gk)
+        gkp = A.lsqr(Gkp, opts.tol, opts.max_inner_iters, gk)
+        # gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.max_inner_iters,[],[],gk)
 
         # If the signal is real and non-negative, Fienup updates object domain
         # following the constraint
-        if not opts.isComplex and opts.isNonNegativeOnly:
+        if not opts.is_complex and opts.is_non_negative_only:
             inds = gkp < 0  # Get indices that are outside the non-negative constraints
                             # May also need to check if isreal
             inds2 = not inds # Get the complementary indices
@@ -208,36 +171,11 @@ def solveFienup(A, At, b0, x0, opts):
         gk = gknew # update gk
     sol = gk
 #     % Create output according to the options chosen by user
-    container.iterationCount = iter
+    container.iteration_count = iter
     return sol, container
 
-def solveGerchbergSaxton(A, At, b0, x0, opts):
-    return
 
-def solveKaczmarzSimple(A, At, b0, x0, opts):
-    return
-def solvePhaseMax(A, At, b0, x0, opts):
-    return
-
-def solvePhaseLamp(A, At, b0, x0, opts):
-    return
-
-def solvePhaseLift(A, At, b0, x0, opts):
-    return
-
-def solveRAF(A, At, b0, x0, opts):
-    return
-
-def solveRWF(A, At, b0, x0, opts):
-    return
-
-def solveSketchyCGM(A, At, b0, x0, opts):
-    return
-
-def solveTAF(A, At, b0, x0, opts):
-    return
-
-def solveTWF(A, At, b0, x0, opts):
+def solve_twf(A, At, b0, x0, opts):
     """
     Implementation of the truncated Wirtinger Flow (TWF) algorithm.
     The code below is adapted from implementation of the
@@ -252,7 +190,7 @@ def solveTWF(A, At, b0, x0, opts):
         b0:   m x 1 real,non-negative vector consists of all the measurements.
         x0:   n x 1 vector. It is the initial guess of the unknown signal x.
         opts: A struct consists of the options for the algorithm. For details,
-              see header in solvePhaseRetrieval.m or the User Guide.
+              see header in solve_phase_retrieval.m or the User Guide.
 
         Note: When a function handle is used, the value of 'At' (a function
         handle for the adjoint of 'A') must be supplied.
@@ -260,10 +198,10 @@ def solveTWF(A, At, b0, x0, opts):
     Outputs:
         sol:  n x 1 vector. It is the estimated signal.
         outs: A struct containing convergence info. For details,
-              see header in solvePhaseRetrieval.m or the User Guide.
+              see header in solve_phase_retrieval.m or the User Guide.
 
 
-     See the script 'testTWF.m' for an example of proper usage of this
+     See the script 'test_tWF.m' for an example of proper usage of this
      function.
 
     Notations:
@@ -284,8 +222,8 @@ def solveTWF(A, At, b0, x0, opts):
      This gives us a more stable search directions and avoids the overshoot
      problem of the Wirtinger Flow Algorithm.
 
-     We also add a feature: when opts.isComplex==false and
-     opts.isNonNegativeOnly==true i.e. when the signal is real and
+     We also add a feature: when opts.is_complex==false and
+     opts.is_non_negative_only==true i.e. when the signal is real and
      non_negative signal, then at each iteration, negative values in the
      latest solution vector will be set to 0. This helps to speed up the
      convergence of errors.
@@ -304,12 +242,13 @@ def solveTWF(A, At, b0, x0, opts):
     Copyright (c) University of Maryland, 2017
 
     """
-    gdOpts = gdOptions(opts)
+    gd_opts = gd_options(opts)
 
-    def updateObjective(x, Ax):
-        y = b0**2 # The TWF formulation uses y as the measurements rather than b0
+    def update_objective(x, Ax):
+        y = b0**2 # The TWF formulation uses y as the measurements rather than
+                  # b0
         m = y.size # number of Measurements
-        Kt = 1/m*norm(y-np.abs(Ax)**2, ord=1);   # 1/m * sum(|y-|a'z|^2|)
+        Kt = 1/m*norm(y-np.abs(Ax)**2, ord=1) # 1/m * sum(|y-|a'z|^2|)
         # Truncation rules
         # Unlike what specified in the TWF paper Algorithm1, the
         # term sqrt(n)/abs(x) does not appear in the following equations
@@ -333,160 +272,48 @@ def solveTWF(A, At, b0, x0, opts):
 
         return f, gradf
 
-    sol, outs = gradientDescentSolver(A, At, x0, b0, updateObjective, gdOpts)
+    sol, outs = gradient_descent_solver(A, At, x0, b0, update_objective, gd_opts)
 
     return sol, outs
 
-def solveWirtFlow(A, At, b0, x0, opts):
-
+def solve_gerchberg_saxton(A, At, b0, x0, opts):
     return
 
-def solveX(A, At, b0, x0, opts):
-    chooseAlgorithm = {'custom': optsCustomAlgorithm,
-                   'amplitudeflow': solveAmplitudeFlow,
-                   'coordinatedescent': solveCoordinateDescent,
-                   'fienup': solveFienup,
-                   'gerchbergsaxton': solveGerchbergSaxton,
-                   'kaczmarz': solveKaczmarzSimple,
-                   'phasemax': solvePhaseMax,
-                   'phaselamp': solvePhaseLamp,
-                   'phaselift': solvePhaseLift,
-                   'raf': solveRAF,
-                   'rwf': solveRWF,
-                   'sketchycgm': solveSketchyCGM,
-                   'taf': solveTAF,
-                   'twf': solveTWF,
-                   'wirtflow': solveWirtFlow}
-    sol, outs = chooseAlgorithm[opts.algorithm.lower()](A, At, b0, x0, opts)
+def solve_kaczmarz_simple(A, At, b0, x0, opts):
+    return
 
-    return sol, outs, opts
+def solve_phase_max(A, At, b0, x0, opts):
+    return
 
+def solve_phase_lamp(A, At, b0, x0, opts):
+    return
 
-def solvePhaseRetrieval(A, b0, At=None, opts=None):
-    """ This method solves the problem:
-                          Find x given b0 = |Ax+epsilon|
-     Where A is a m by n complex matrix, x is a n by 1 complex vector, b0 is a
-     m by 1 real,non-negative vector and epsilon is a m by 1 vector. The user
-     supplies function handles A, At and measurement b0. Note: The unknown
-     signal to be recovered must be 1D for our interface.
-     Inputs:
-      A     : A m x n matrix (or optionally a function handle to a method) that returns A*x
-      At    : The adjoint (transpose) of 'A.' It can be a n x m matrix or a function handle.
-      b0    : A m x 1 real,non-negative vector consists of  all the measurements.
-      n     : The size of the unknown signal. It must be provided if A is a function handle.
-      opts  : An optional struct with options.  The commonly used fields of 'opts' are:
-                 initMethod              : (string,
-                 default='truncatedSpectral') The method used
-                                           to generate the initial guess x0.
-                                           User can use a customized initial
-                                           guess x0 by providing value to
-                                           the field customx0.
-                 algorithm               : (string, default='altmin') The
-                                           algorithm used
-                                           to solve the phase retrieval
-                                           algorithm. User can use a
-                                           customized algorithm by providing
-                                           a function [A,At,b0,x0,opts]
-                                           ->[x,outs,opts] to the field
-                                           customAlgorithm.
-                 maxIters                : (integer, default=1000) The
-                                           maximum number of
-                                           iterations allowed before
-                                           termination.
-                 maxTime                 : (positive real number,
-                                           default=120, unit=second)
-                                           The maximum seconds allowed
-                                           before termination.
-                 tol                     : (double, default=1e-6) The
-                                           stopping tolerance.
-                                           It will be compared with
-                                           reconerror if xt is provided.
-                                           Otherwise, it will be compared
-                                           with residual. A smaller value of
-                                           'tol' usually results in more
-                                           iterations.
-                 verbose                 : ([0,1,2], default=0)  If ==1,
-                                           print out
-                                           convergence information in the
-                                           end. If ==2, print out
-                                           convergence information at every
-                                           iteration.
-                 recordMeasurementErrors : (boolean, default=false) Whether
-                                           to compute and record
-                                           error(i.e.
-                                           norm(|Ax|-b0)/norm(b0)) at each
-                                           iteration.
-                 recordResiduals         : (boolean, default=true) If it's
-                                           true, residual will be
-                                           computed and recorded at each
-                                           iteration. If it's false,
-                                           residual won't be recorded.
-                                           Residual also won't be computed
-                                           if xt is provided. Note: The
-                                           error metric of residual varies
-                                           across solvers.
-                 recordReconErrors       : (boolean, default=false) Whether
-                                           to record
-                                           reconstruction error. If it's
-                                           true, opts.xt must be provided.
-                                           If xt is provided reconstruction
-                                           error will be computed regardless
-                                           of this flag and used for
-                                           stopping condition.
-                 recordTimes             : (boolean, default=true) Whether
-                                           to record
-                                           time at each iteration. Time will
-                                           be measured regardless of this
-                                           flag.
-                 xt                      : A n x 1 vector. It is the true
-                                           signal. Its purpose is
-                                           to compute reconerror.
+def solve_phase_lift(A, At, b0, x0, opts):
+    return
 
-              There are other more algorithms specific options not listed
-              here. To use these options, set the corresponding field in
-              'opts'. For example:
-                        >> opts.tol=1e-8; >> opts.maxIters = 100;
+def solve_raf(A, At, b0, x0, opts):
+    return
+
+def solve_rwf(A, At, b0, x0, opts):
+    return
+
+def solve_sketchy_cgm(A, At, b0, x0, opts):
+    return
+
+def solve_taf(A, At, b0, x0, opts):
+    return
+
+def opts_custom_algorithm(A, At, b0, x0, opts):
+    return
+
+def solve_amplitude_flow(A, At, b0, x0, opts):
+    return
+
+def solve_coordinate_descent(A, At, b0, x0, opts):
+    return
 
 
-     Outputs:
-      sol               : The approximate solution outs : A struct with
-                          convergence information
-      iterationCount    : An integer that is  the number of iterations the
-                          algorithm runs.
-      solveTimes        : A vector consists  of elapsed (exist when
-                          recordTimes==true) time at each iteration.
-      measurementErrors : A vector consists of the errors (exist when
-                          recordMeasurementErrors==true)   i.e.
-                          norm(abs(A*x-b0))/norm(b0) at each iteration.
-      reconErrors       : A vector consists of the reconstruction (exist
-                          when recordReconErrors==true) errors
-                          i.e. norm(xt-x)/norm(xt) at each iteration.
-      residuals         : A vector consists of values that (exist when
-                          recordResiduals==true)  will be compared with
-                          opts.tol for stopping condition  checking.
-                          Definition varies across solvers.
-      opts              : A struct that contains fields used by the solver.
-                          Its possible fields are the same as the input
-                          parameter opts.
 
-   For more details and more options in opts, see the Phasepack user guide.
+def solve_wirt_flow(A, At, b0, x0, opts):
 
-   PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-   Christoph Studer, & Tom Goldstein Copyright (c) University of Maryland, 2017
-    """
-    # If opts is not provided, create it
-    if opts is None:
-        opts = Options()
-    if type(A) == np.ndarray:
-        A = ConvMatrix(A)
-    # Check that inputs are of valid datatypes and sizes
-    A.validateInput(b0=b0, opts=opts)
-    # # Initialize x0
-    x0 = initX(A=A, b0=b0, opts=opts)
-    # % Truncate imaginary components of x0 if working with real values
-    if not opts.isComplex:
-        x0 = np.real(x0)
-    elif opts.isNonNegativeOnly:
-        warnings.warn('opts.isNonNegativeOnly will not be used when the signal is complex.');
-    [sol, outs, opts] = solveX(A=A, At=None, b0=b0, x0=x0, opts=opts) # Solve the problem using the specified algorithm
-    return sol, outs, opts
+    return
