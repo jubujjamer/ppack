@@ -1,3 +1,4 @@
 # Ignoring profiling results
 .lprof
 .prof
+__pycache__
