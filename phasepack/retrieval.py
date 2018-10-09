@@ -1,6 +1,6 @@
 import numpy as np
 
-from phasepack.matops import ConvMatrix
+from phasepack.matops import ConvolutionMatrix
 from phasepack.initializers import init_spectral, init_optimal_spectral
 from phasepack.containers import Options
 import phasepack.solvers as sv
@@ -11,9 +11,9 @@ class Retrieval(object):
         # If opts is not provided, create it
         if opts is None:
             opts = Options()
-        # If A was not instantiated as a ConvMatrix
+        # If A was not instantiated as a ConvolutionMatrix
         if type(A) == np.ndarray:
-            A = ConvMatrix(A)
+            A = ConvolutionMatrix(A)
         self.A = A
         self.opts = opts
 

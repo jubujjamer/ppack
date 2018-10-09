@@ -23,7 +23,7 @@ from numpy.linalg import norm
 from scipy.sparse.linalg import eigs
 
 from phasepack.containers import Options
-from phasepack.matops import ConvMatrix
+from phasepack.matops import ConvolutionMatrix
 
 
 def  init_spectral(A, b0, At=None, is_scaled=False, is_truncated=False, verbose=False):
@@ -37,15 +37,15 @@ def  init_spectral(A, b0, At=None, is_scaled=False, is_truncated=False, verbose=
 
     Parameters:
     -------
-    A:  ndarray or ConvMatrix.
-        This is the (n x m) matrix or the ConvMatrix used to perform all the
-        operations for the reconstruction. Prefer ConvMatrix for optimization.
+    A:  ndarray or ConvolutionMatrix.
+        This is the (n x m) matrix or the ConvolutionMatrix used to perform all the
+        operations for the reconstruction. Prefer ConvolutionMatrix for optimization.
     At: ndarray
-        Deprecated. If a ConvMatrix is used, it contains this information.
+        Deprecated. If a ConvolutionMatrix is used, it contains this information.
     b0: array
         m x 1 real, non-negative vector consists of all the measurements.
     n:  int
-        The size of the unknown signal. Deprecated, if a ConvMatrix is used, it
+        The size of the unknown signal. Deprecated, if a ConvolutionMatrix is used, it
         contains this information.
     is_truncated: bool
         If true, use the 'truncated' initializer that uses a sub-sample of the
@@ -56,7 +56,7 @@ def  init_spectral(A, b0, At=None, is_scaled=False, is_truncated=False, verbose=
 
     Note:
     -----
-    Always use an instance of the ConvMatrix class prefereably.
+    Always use an instance of the ConvolutionMatrix class prefereably.
 
     Returns:
     --------

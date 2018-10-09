@@ -18,7 +18,7 @@ from numpy.random import randn
 
 from pdb import set_trace as bp
 from phasepack.containers import Options, ResultsContainer, display_verbose_output
-from phasepack.matops import ConvMatrix
+from phasepack.matops import ConvolutionMatrix
 
 class gd_options(object):
     """ Gradient Descent Algorithm Options manager.

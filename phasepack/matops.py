@@ -22,7 +22,7 @@ import numpy as np
 from scipy.sparse.linalg import LinearOperator, eigs, lsqr
 from numpy.random import multivariate_normal as mvnrnd
 
-class ConvMatrix(object):
+class ConvolutionMatrix(object):
     """ Convolution matrix container.
     """
     def __init__(self, A=None, mv=None, rmv=None, shape=None):
@@ -43,7 +43,7 @@ class ConvMatrix(object):
             elif not callable(rmv):
                 raise Exception('Input rmv was not a function. Both mv and rmv shoud be functions, or both empty.')
         else:
-            # One of both inputs are needed for ConvMatrix creation
+            # One of both inputs are needed for ConvolutionMatrix creation
             raise Exception('A was not an ndarray, and both multiplication functions A(x) and At(x) were not provided.')
         self.m = self.shape[0]
         self.n = self.shape[1]
@@ -73,7 +73,7 @@ class ConvMatrix(object):
         return
 
     def lsqr(self, b, tol, maxit, x0):
-        """ Solution of the least squares problem for ConvMatrix
+        """ Solution of the least squares problem for ConvolutionMatrix
         Gkp, opts.tol/100, opts.max_inner_iters, gk
         """
         if b.shape[1]>0:
@@ -95,11 +95,11 @@ class ConvMatrix(object):
         return self.matrix.matvec(x)
 
     def __matmul__(self, x):
-        """Implementation of left ConvMatrix multiplication, i.e. A@x"""
+        """Implementation of left ConvolutionMatrix multiplication, i.e. A@x"""
         return self.matrix.dot(x)
 
     def __rmatmul__(self, x):
-        """Implementation of right ConvMatrix multiplication, i.e. x@A"""
+        """Implementation of right ConvolutionMatrix multiplication, i.e. x@A"""
         return
 
     def __rmul__(self, x):

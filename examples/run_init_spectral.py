@@ -32,7 +32,7 @@
 import numpy as np
 from numpy.random import randn
 from numpy.linalg import norm
-from phasepack.util import Options, ConvMatrix
+from phasepack.util import Options, ConvolutionMatrix
 from phasepack.initializers import init_spectral
 from numpy.random import multivariate_normal as mvnrnd
 
@@ -45,7 +45,7 @@ is_complex = True   # use complex matrices? or just stick to real?
 # Build the test problem
 xt = randn(n, 1) + is_complex*randn(n,1)*1j # true solution
 A = randn(m, n) + is_complex*randn(m, n)*1j # matrix
-A = ConvMatrix(A)
+A = ConvolutionMatrix(A)
 b0 = abs(A*xt) # data
 # Set up Parameters
 is_truncated = True

@@ -26,7 +26,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from phasepack.containers import Options
-from phasepack.matops import ConvMatrix
+from phasepack.matops import ConvolutionMatrix
 from phasepack.retrieval import Retrieval
 
 # Parameters
@@ -35,7 +35,7 @@ m = 8*n # Number of measurements
 # Build the target signal
 x_true = randn(n, 1)+1j*randn(n, 1)
 # Create the measurement operator
-A = ConvMatrix(randn(m, n) + 1j*randn(m,n))
+A = ConvolutionMatrix(randn(m, n) + 1j*randn(m,n))
 # Compute phaseless measurements
 b = np.abs(A*x_true)
 # Set options for PhasePack - this is where we choose the recovery algorithm

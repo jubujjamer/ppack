@@ -48,7 +48,7 @@ import matplotlib.pyplot as plt
 from numpy.random import rand
 import time
 from phasepack.containers import Options
-from phasepack.matops import ConvMatrix
+from phasepack.matops import ConvolutionMatrix
 from phasepack.retrieval import Retrieval
 import scipy
 #########################################################################
@@ -108,7 +108,7 @@ x = image.reshape(-1, 1)   # Convert the signal/image into a vector so PhasePac
 # b = abs(A(x)) Use the measurement operator 'A', defined below, to obtain
 # phaseless measurements.
 b = np.abs(Afunc(x, masks))
-A = ConvMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks,
+A = ConvolutionMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks,
                                      numrows*numcols))
 # Run the Phase retrieval Algorithm
 # Set options for PhasePack - this is where we choose the recovery algorithm.
