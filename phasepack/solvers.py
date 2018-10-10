@@ -5,7 +5,9 @@ retrieval problem.
 Functions:
 ----------
 
-solve_fienup:       Checks wether A and At are transpose conjugates.
+solve_fienup      Solver using the Fienup algorithm.
+
+solve_twf         Truncated Wirtinger Flow method.
 
 Based on MATLAB implementation by Rohan Chandra, Ziyuan Zhong, Justin Hontz,
 Val McCulloch, Christoph Studer & Tom Goldstein.

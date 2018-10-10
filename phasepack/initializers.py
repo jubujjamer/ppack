@@ -5,7 +5,10 @@ phasepack.
 Funcions
 --------
 
-init_spectral       This
+init_spectral           Initializer proposed in Algorithm1 of the Wirtinger
+                        Flow paper.
+
+init_optimal_spectral   Based on a omptimal spectral condition.
 
 Based on MATLAB implementation by Rohan Chandra, Ziyuan Zhong, Justin Hontz,
 Val McCulloch, Christoph Studer & Tom Goldstein.

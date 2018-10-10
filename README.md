@@ -8,6 +8,13 @@ This is a work in progress and just a few of the methods are currently implement
 
 The original package used function handlers to perform least squares, eigenvectors and matrix vector products in an efficient way. In a similar fashion, this version uses scipy's LinearOperators, which allow the same operations to be performed with the same philosophy.
 
+# Dependencies
+Run this module using a conda instalation of numpy and scipy (for efficiency sake, don't use pip). The scikit-image module and imageio should also be installed, as long as numba.
+```
+conda install numpy scipy scikit-image numba imageio
+```
+After this, you can run `run_image_reonstruction_demo.py` and `run_signal_reconstruction_demo.py` from the 'examples' folder to test all is working ok.
+
 # Who created Phasepack?
 
 Rohan Chandra - University of Maryland 

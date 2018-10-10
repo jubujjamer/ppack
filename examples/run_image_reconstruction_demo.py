@@ -56,7 +56,6 @@ import scipy
 #########################################################################
 # Create a measurement operator that maps a vector of pixels into Fourier
 # measurements using the random binary masks defined above.
-
 def Afunc(pixels, masks):
     """ The fourier mask matrix operator
     As the reconstruction method stores iterates as vectors, this
@@ -64,28 +63,18 @@ def Afunc(pixels, masks):
     """
     nmasks, numrows, numcols = masks.shape
     im = pixels.reshape(numrows, numcols)
-#    measurements = np.array([np.fft.fft2(im*m).reshape(numrows*numcols,)
-#                             for m in masks]).reshape(-1,1)
     measurements = np.fft.fft2(masks*im)
     return measurements.reshape(nmasks*numrows*numcols, 1)
 
 # The adjoint/transpose of the measurement operator
-
 def Atfunc(measurements, masks):
     # The reconstruction method stores measurements as vectors, so we need
     # to accept a vector input, and convert it back into a 3D array of
     # Fourier measurements.
     nmasks, numrows, numcols = masks.shape
     measurements = measurements.reshape(nmasks, numrows, numcols)
-     # Allocate space for the returned value
-    #im = np.zeros((numrows, numcols))
-#    im = np.array([np.fft.ifft2(measurements[m, ...])*masks[m, ...]*
-#                               numrows*numcols for m in range(nmasks)])
-#    im_out = sum(im).reshape(-1, 1)
-#    print(im_out.shape)
     im = np.fft.ifft2(measurements)*masks*numrows*numcols
     im_out = np.sum(im,axis=0).reshape(-1, 1)
-#    print(im_out.shape)
     return im_out
 
 # Specify the target image and number of measurements/masks
@@ -103,8 +92,8 @@ mv = lambda pixels: Afunc(pixels, masks)
 rmv= lambda measurements: Atfunc(measurements, masks)
 # Nete, the meanurement operator 'A', and it's adjoint 'At', are defined
 # below as separate functions
-x = image.reshape(-1, 1)   # Convert the signal/image into a vector so PhasePac
-                           #k can handle it
+x = image.reshape(-1, 1)   # Convert the signal/image into a vector so
+                           # PhasePack can handle it
 # b = abs(A(x)) Use the measurement operator 'A', defined below, to obtain
 # phaseless measurements.
 b = np.abs(Afunc(x, masks))
@@ -137,13 +126,11 @@ print('Running %s algorithm\n' % opts.algorithm)
 x, outs, opts = retrieval.solve_phase_retrieval()
 # Convert the vector output back into a 2D image
 recovered_image = x.reshape(numrows, numcols)
-
 # Phase retrieval can only recover images up to a phase ambiguity.
 # Let's apply a phase rotation to align the recovered image with the
 # original so it looks nice when we display it.
 rotation = (recovered_image.conjugate().T@image)/\
             np.abs(recovered_image.conjugate().T@image)
-print(rotation.shape)
 recovered_image = np.real(recovered_image)
 # Print some useful info to the console
 print('Image recovery required %d iterations (%f secs)\n'
