@@ -1,9 +1,9 @@
 import numpy as np
 
-from phasepack.matops import ConvolutionMatrix
-from phasepack.initializers import init_spectral, init_optimal_spectral
-from phasepack.containers import Options
-import phasepack.solvers as sv
+from .matops import ConvolutionMatrix
+from .initializers import init_spectral, init_optimal_spectral
+from .containers import Options
+from . import solvers as sv
 
 class Retrieval(object):
     def __init__(self, A, b0, opts):
@@ -24,27 +24,26 @@ class Retrieval(object):
                                 is_scaled=True, verbose=self.opts.verbose)
         elif chosen_opt == 'spectral':
             return init_spectral(A=self.A, At=None, b0=self.b0,
-                                is_truncated=False, is_scaled=True, verbose=self.opts.verbose)
+                                is_truncatmax_timeed=False, is_scaled=True, verbose=self.opts.verbose)
         elif chosen_opt == 'optimal' or chosen_opt == 'optimalspectral':
             return init_optimal_spectral(A=self.A, At=None, b0=self.b0,
                                 is_scaled=True,
                                 verbose=self.opts.verbose)
-    #    elif chosen_opt == 'amplitudespectral' or chosen_opt == 'amplitude':
-    #        return init_amplitude(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
-    #    elif chosen_opt == 'weightedspectral' or chosen_opt == 'weighted':
-    #        return init_weighted(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
-    #    elif chosen_opt == 'orthogonalspectral' or chosen_opt == 'orthogonal':
-    #        return init_orthogonal(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
-    #    elif chosen_opt == 'angle':
-    #        return init_angle(xt=opts.xt, angle=opts.init_angle)
-        # case 'angle'
-        #     assert(isfield(opts,'xt'),'The true solution, opts.xt, must be specified to use the angle initializer.')
-        #     assert(isfield(opts,'init_angle'),'An angle, opts.init_angle, must be specified (in radians) to use the angle initializer.')
-        #     x0 = init_angle(opts.xt, opts.init_angle);
-        # case 'custom'
+        #elif chosen_opt == 'amplitudespectral' or chosen_opt == 'amplitude':
+        #    return init_amplitude(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
+        #elif chosen_opt == 'weightedspectral' or chosen_opt == 'weighted':
+        #    return init_weighted(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
+        #elif chosen_opt == 'orthogonalspectral' or chosen_opt == 'orthogonal':
+        #    return init_orthogonal(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
+        #elif chosen_opt == 'angle':
+        #    return init_angle(xt=opts.xt, angle=opts.init_angle)
+        #    assert(isfield(opts,'xt'),'The true solution, opts.xt, must be specified to use the angle initializer.')
+        #    assert(isfield(opts,'init_angle'),'An angle, opts.init_angle, must be specified (in radians) to use the angle initializer.')
+        #    x0 = init_angle(opts.xt, opts.init_angle);
+        #elif 'custom':
         #     x0 = opts.customx0;
         else:
-            raise Exception('Unknown initialization option.')
+            raise Exception(NotImplementedError)
         return x0
 
 

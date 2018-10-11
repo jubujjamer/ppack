@@ -21,8 +21,8 @@ import warnings
 import numpy as np
 from numpy.linalg import norm
 
-from phasepack.containers import display_verbose_output, stop_now, ResultsContainer
-from phasepack.math import gd_options, gradient_descent_solver
+from .containers import display_verbose_output, stop_now, ResultsContainer
+from .math import gd_options, gradient_descent_solver
 
 def solve_fienup(A, At, b0, x0, opts):
     """ Solver for Fienup algorithm.
@@ -38,7 +38,7 @@ def solve_fienup(A, At, b0, x0, opts):
     opts: A struct consists of the options for the algorithm. For details,
           see header in solve_phase_retrieval.m or the User Guide.
 
-    Note: When a function handle is used, the
+    Note: When a funphasepackction handle is used, the
     value of 'At' (a function handle for the adjoint of 'A') must be
     supplied.
 
@@ -82,7 +82,7 @@ def solve_fienup(A, At, b0, x0, opts):
 
     For a detailed explanation, see the Fienup paper referenced below.
 
-    References:
+    References:phasepack
     -----------
     Paper Title:   Phase retrieval algorithms: a comparison
     Place:         Section II for notation and Section V for the
@@ -107,15 +107,14 @@ def solve_fienup(A, At, b0, x0, opts):
     beta = opts.fienup_tuning     # GS tuning parameter
     # Initialize vectors for recording convergence information
     container = ResultsContainer(opts)
-    start_time = time.time()
+    start_time = time.monotonic()
     for iter in range(opts.max_iters):
+        current_time = time.monotonic()-start_time
         Ax = A*gk # Intermediate value to save repetitive computation
         Gkp = b0*Ax/np.abs(Ax) # This is MATLAB's definition of complex sign
-        #-----------------------------------------------------------------------
-        # Record convergence information and check stopping condition
-        # If xt is provided, reconstruction error will be computed and used for stopping
-        # condition. Otherwise, residual will be computed and used for stopping
-        # condition.
+        # Record convergence information and check stopping condition.
+        # If xt is provided, reconstruction error will be computed and used for stopping condition, otherwise residual will be computed and used for
+        # stopping condition.
         if opts.xt:
             x = gk
             xt = opts.xt
@@ -128,14 +127,10 @@ def solve_fienup(A, At, b0, x0, opts):
 
         if not opts.xt or opts.record_residuals:
             current_resid = norm(A.hmul((Ax-Gkp)))/norm(Gkp)
-
         if opts.record_residuals:
             container.append_residual(current_resid)
-
-        current_time = time.time()-start_time  #Record elapsed time so far
         if opts.record_times:
             container.append_record_time(current_time)
-
         if opts.record_measurement_errors:
             current_measurement_error = norm(np.abs(A*gk)-b0)/norm(b0)
             container.append_measurement_error(current_measurement_error)
@@ -145,26 +140,25 @@ def solve_fienup(A, At, b0, x0, opts):
                                container.last_residual(),
                                container.last_recon_error(),
                                container.last_meas_error())
-        #  Test stopping criteria.
+        # Test stopping criteria.
         if stop_now(opts, container.last_time(),
                          container.last_residual(),
                          container.last_recon_error()):
             break
         # Solve the least-squares problem
-        # gkp = \argmin ||Ax-Gkp||^2.
-        # If A is a matrix,
-        # gkp = inv(A)*Gkp
-        # If A is a fourier transform( and measurements are not oversampled i.e. m==n),
-        # gkp = inverse fourier transform of Gkp
+        #                    gkp = \argmin ||Ax-Gkp||^2.
+        # If A is a matrix
+        #                    gkp = inv(A)*Gkp.
+        # If A is a fourier transform( and measurements are not oversampled
+        # i.e. m==n)
+        #                    gkp = inverse fourier transform of Gkp
         gkp = A.lsqr(Gkp, opts.tol, opts.max_inner_iters, gk)
-        # gkp=lsqr(@Afun,Gkp,opts.tol/100,opts.max_inner_iters,[],[],gk)
-
         # If the signal is real and non-negative, Fienup updates object domain
         # following the constraint
         if not opts.is_complex and opts.is_non_negative_only:
-            inds = gkp < 0  # Get indices that are outside the non-negative constraints
-                            # May also need to check if isreal
+            inds = gkp < 0  # Get indices that are outside the non-negative constraints. May also need to check if isreal
             inds2 = not inds # Get the complementary indices
+            print(inds2)
             # hybrid input-output (see Section V, Equation (44))
             gknew[inds] = gk[inds] - beta*gkp[inds]
             gknew[inds2] = gkp[inds2]
@@ -172,7 +166,7 @@ def solve_fienup(A, At, b0, x0, opts):
             gknew = gkp.reshape(-1,1)
         gk = gknew # update gk
     sol = gk
-#     % Create output according to the options chosen by user
+    # Create output according to the options chosen by user
     container.iteration_count = iter
     return sol, container
 

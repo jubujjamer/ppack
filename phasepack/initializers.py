@@ -25,8 +25,8 @@ import numpy as np
 from numpy.linalg import norm
 from scipy.sparse.linalg import eigs
 
-from phasepack.containers import Options
-from phasepack.matops import ConvolutionMatrix
+from .containers import Options
+from .matops import ConvolutionMatrix
 
 
 def  init_spectral(A, b0, At=None, is_scaled=False, is_truncated=False, verbose=False):

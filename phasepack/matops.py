@@ -37,14 +37,18 @@ class ConvolutionMatrix(object):
             if shape:
                 self.shape = shape
             else:
-                raise Exception('If A is not given, its shape must be provided.')
+                print('If A is not given, its shape must be provided.')
+                raise Exception(RuntimeError)
             if not callable(mv):
-                raise Exception('Input mv was not a function. Both mv and rmv shoud be functions, or both empty.')
+                print('Input mv was not a function. Both mv and rmv shoud be functions, or both empty.')
+                raise Exception(RuntimeError)
             elif not callable(rmv):
-                raise Exception('Input rmv was not a function. Both mv and rmv shoud be functions, or both empty.')
+                print('Input rmv was not a function. Both mv and rmv shoud be functions, or both empty.')
+                raise Exception(RuntimeError)
         else:
             # One of both inputs are needed for ConvolutionMatrix creation
-            raise Exception('A was not an ndarray, and both multiplication functions A(x) and At(x) were not provided.')
+            print('A was not an ndarray, and both multiplication functions A(x) and At(x) were not provided.')
+            raise Exception(RuntimeError)
         self.m = self.shape[0]
         self.n = self.shape[1]
         self.matrix = LinearOperator(self.shape, matvec=mv, rmatvec=rmv)
@@ -81,7 +85,7 @@ class ConvolutionMatrix(object):
         if x0.shape[1]>0:
             x0 = x0.reshape(-1)
         # x, istop, itn, r1norm = lsqr(self.matrix, b, atol=tol, btol=tol, iter_lim=maxit, x0=x0)
-        ret = lsqr(self.matrix, b, atol=tol/100, btol=tol/100, iter_lim=maxit, x0=x0)
+        ret = lsqr(self.matrix, b, damp=0.01, atol=tol/100, btol=tol/100, iter_lim=maxit, x0=x0)
         x = ret[0]
         return x
 
@@ -116,152 +120,6 @@ class ConvolutionMatrix(object):
         yfun = LinearOperator((self.n, self.n), matvec=ymatvec)
         [eval, x0] = eigs(yfun, k=1, which='LR',tol=1E-5)
         return x0
-
-def stop_now(opts, current_time, current_resid, current_recon_error):
-    """
-    Used in the main loop of many solvers (i.e.solve*.m) to
-    check if the stopping condition(time, residual and reconstruction error)
-    has been met and thus loop should be breaked.
-
-
-    Note:
-    This function does not check for max iterations since the for-loop
-    in the solver already gurantee it.
-
-    Inputs:
-    opts(struct)                   :  consists of options. It is as
-                  defined in solver_phase_retrieval.
-                  See its header or User Guide
-                  for details.
-    current_resid(real number)      :  Definition depends on the
-                  specific algorithm used see the
-                  specific algorithm's file's
-                  header for details.
-    current_recon_error(real number) :  norm(xt-x)/norm(xt), where xt
-                  is the m x 1 true signal,
-                  x is the n x 1 estimated signal
-                  at current iteration.
-    Outputs:
-    if_stop(boolean)                :  If the stopping condition has
-                  been met.
-
-
-
-    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-    Christoph Studer, & Tom Goldstein
-    Copyright (c) University of Maryland, 2017
-    """
-    if current_time >= opts.max_time:
-        return True
-    if len(opts.xt)>0:
-        assert current_recon_error, 'If xt is provided, current_recon_error must be provided.'
-        if_stop = current_recon_error < opts.tol
-    else:
-        assert current_resid, 'If xt is not provided, current_resid must be provided.'
-        if_stop = current_resid < opts.tol
-    return if_stop
-
-def  display_verbose_output(iter, current_time, current_resid=None, current_recon_error=None, current_measurement_error=None):
-    """ Prints out the convergence information at the current
-    iteration. It will be invoked inside solve*.m if opts.verbose is set
-    to be >=1.
-
-    Inputs:
-      iter(integer)                        : Current iteration number.
-      current_time(real number)             : Elapsed time so far(clock starts
-                                             when the algorithm main loop
-                                             started).
-      current_resid(real number)            : Definition depends on the
-                                             specific algorithm used see the
-                                             specific algorithm's file's
-                                             header for details.
-      current_recon_error(real number)       : relative reconstruction error.
-                                             norm(xt-x)/norm(xt), where xt
-                                             is the m x 1 true signal, x is
-                                             the n x 1 estimated signal.
-
-      current_measurement_error(real number) : norm(abs(Ax)-b0)/norm(b0), where
-                                             A is the m x n measurement
-                                             matrix or function handle
-                                             x is the n x 1 estimated signal
-                                             and b0 is the m x 1
-                                             measurements.
-
-    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-    Christoph Studer, & Tom Goldstein
-    Copyright (c) University of Maryland, 2017
-    """
-    print('Iteration = %d' % iter, end=' |')
-    print('iteration_time = %f' % current_time, end=' |')
-    if current_resid:
-        print('Residual = %.1e' % current_resid, end=' |')
-    if current_recon_error:
-        print('current_recon_error = %.3f' %current_recon_error, end=' |')
-    if current_measurement_error:
-        print('measurement_error = %.1e' %current_measurement_error, end=' |')
-    print()
-
-def plot_error_convergence(outs, opts):
-    """
-    This function plots some convergence curve according to the values of
-    options in opts specified by user. It is used in all the test*.m scripts.
-    Specifically,
-    If opts.record_recon_errors is true, it plots the convergence curve of
-    reconstruction error versus the number of iterations.
-    If opts.record_residuals is true, it plots the convergence curve of
-    residuals versus the number of iterations.
-    The definition of residuals is algorithm specific. For details, see the
-    specific algorithm's solve*.m file.
-    If opts.record_measurement_errors is true, it plots the convergence curve
-    of measurement errors.
-
-    Inputs are as defined in the header of solve_phase_retrieval.m.
-    See it for details.
-
-
-    PhasePack by Rohan Chandra, Ziyuan Zhong, Justin Hontz, Val McCulloch,
-    Christoph Studer, & Tom Goldstein
-    Copyright (c) University of Maryland, 2017
-
-    """
-
-    # Plot the error convergence curve
-    if opts.record_recon_errors:
-        plt.figure()
-        plt.semilogy(outs.recon_errors)
-        plt.xlabel('Iterations')
-        plt.ylabel('recon_errors')
-        plt.title('Convergence curve: %s' % opts.algorithm)
-    if opts.record_residuals:
-        plt.figure()
-        plt.semilogy(outs.residuals)
-        plt.xlabel('Iterations')
-        plt.ylabel('Residuals')
-        plt.title('Convergence curve: %s' % opts.algorithm)
-    if opts.record_measurement_errors:
-        plt.figure()
-        plt.semilogy(outs.measurement_errors);
-        plt.xlabel('Iterations');
-        plt.ylabel('measurement_erros');
-        plt.title('Convergence curve: %s' % opts.algorithm)
-    plt.show()
-
-def plot_recovered_vs_original(x,xt):
-    """Plots the real part of the recovered signal against
-    the real part of the original signal.
-    It is used in all the test*.m scripts.
-
-    Inputs:
-          x:  a n x 1 vector. Recovered signal.
-          xt: a n x 1 vector. Original signal.
-    """
-    plt.figure()
-    plt.scatter(np.real(x), np.real(xt))
-    plt.plot([-3, 3], [-3, 3], 'r')
-    plt.title('Visual Correlation of Recovered signal with True Signal')
-    plt.xlabel('Recovered Signal')
-    plt.ylabel('True Signal')
-    plt.show()
 
 def build_test_problem(m, n, is_complex=True, is_non_negative_only=False, data_type='Gaussian'):
     """ Creates and outputs random generated data and measurements according to user's choice.
@@ -299,6 +157,6 @@ def build_test_problem(m, n, is_complex=True, is_non_negative_only=False, data_t
     #     b0 = abs(A(xt)); % Compute the phaseless measurements
 
     else:
-        raise Exception('invalid data_type: %s', data_type);
-
+        print('Invalid data_type: %s', data_type)
+        raise Exception(TypeError)
     return [A, xt, b0, At]

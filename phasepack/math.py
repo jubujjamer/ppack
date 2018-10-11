@@ -159,7 +159,7 @@ def update_stepsize(search_dir0, search_dir1, Dx, tau1, tau0):
 
 def process_iteration(index, start_time, Dx, max_diff, opts, x1, update_objective_now, container,
                      residual_tolerance, tolerance_penalty):
-    current_solve_time = time.time()-start_time
+    current_solve_time = time.monotonic()-start_time
     max_diff = max(norm(Dx), max_diff)
     current_residual = norm(Dx)/max_diff
     stop_now = False
@@ -329,7 +329,7 @@ def gradient_descent_solver(A, At, x0, b0, update_objective, opts):
     d1 = A*x1
     Dx = 0
 
-    start_time = time.time()
+    start_time = time.monotonic()
     for index in range(opts.max_iters):
         # Signal to update objective function after fixed number of iterations
         # have passed

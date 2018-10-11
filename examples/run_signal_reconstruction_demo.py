@@ -39,7 +39,7 @@ A = ConvolutionMatrix(randn(m, n) + 1j*randn(m,n))
 # Compute phaseless measurements
 b = np.abs(A*x_true)
 # Set options for PhasePack - this is where we choose the recovery algorithm
-opts = Options(algorithm='Fienup', init_method='optimal', tol=1E-2,
+opts = Options(algorithm='fienup', init_method='optimal', tol=1E-4,
                verbose=2)
 # Create an instance of the phase retrieval class, which manages initializers
 # and selection of solvers acording to the options provided.
