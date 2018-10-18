@@ -54,7 +54,7 @@ from phasepack.retrieval import Retrieval
 
 ## Build a test problem
 # Specify the target image and number of measurements/masks
-image = imread('data/logo.jpg')  # Load the image from the 'data' folder.
+image = imread('phasepack/data/logo.jpg')  # Load the image from the 'data' folder.
 image = color.rgb2gray(image)    # Convert image to grayscale.
 num_fourier_masks = 16           # Select the number of Fourier masks.
 numrows, numcols = image.shape # Image dimensions
