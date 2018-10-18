@@ -1,8 +1,12 @@
 # Phasepack for Python
 
 This is a python implementation of the Phasepack library (https://www.cs.umd.edu/~tomg/projects/phasepack/).
+
 The Phasepack module is a very complete set of methods for the phase retrieval problem, wich arise in many physical applications. It  was originally written in MATLAB and primarily devised to easily benchmark many state of the art phase retrieval algorithms.
-This is a work in progress and just a few of the methods are currently implemented, but it's structure will easily allow the translation of the missing ones. The name of the files and methods were mantained, just changed to underscore notation and phasepack has become a package with initializers and solvers as submodules. Fineup's algorithm and Truncated Wirtinger Flow method are working, along with a few test problems to test them. 
+
+This is a work in progress and just a few of the methods are currently implemented, but it's structure will easily allow the translation of the missing ones. The name of the files and methods were roughly mantained, just changed to underscore notation and some names were pythonized. Also, phasepack has become a package with initializers and solvers as submodules.
+
+Up to now Fineup's algorithm and Truncated Wirtinger Flow method are working, along with a few test problems to test them, the rest of the modules will be soon implemented.
 
 ## Some details
 
