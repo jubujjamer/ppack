@@ -160,3 +160,38 @@ def build_test_problem(m, n, is_complex=True, is_non_negative_only=False, data_t
         print('Invalid data_type: %s', data_type)
         raise Exception(TypeError)
     return [A, xt, b0, At]
+
+class FourierOperator(object):
+    """ Linear operator creator from problem data.
+
+        Create a measurement operator that maps a vector of pixels into Fourier
+        measurements using a collection of PSF's.
+    """
+    def __init__(self, psf_collection):
+        npsf, nrows, ncols = psf_collection.shape
+        self.psf_collection = psf_collection
+        self.npsf = npsf
+        self.nrows = nrows
+        self.ncols = ncols
+
+    def mv(self, xvec):
+        """The fourier mask matrix operator
+        As the reconstruction method stores iterates as vectors, this
+        function needs to accept a vector as input.
+        """
+        xvec2d = xvec.reshape(self.nrows, self.ncols)
+        bvec2d = np.fft.fft2(self.psf_collection*xvec2d)
+        bvec_array = bvec2d.reshape(self.npsf*self.nrows*self.ncols, 1)
+        return bvec_array
+
+    def rmv(self, bvec):
+        # The adjoint/transpose of the measurement operator
+        # The reconstruction method stores measurements as vectors, so we need
+        # to accept a vector input, and convert it back into a 3D array of
+        # Fourier measurements.
+        bvec2d_array = bvec.reshape(self.npsf, self.nrows, self.ncols)
+        conv_images = np.fft.ifft2(bvec2d_array)
+        conv_images = conv_images*self.psf_collection*self.nrows*self.ncols
+        imagesvec = np.sum(conv_images,axis=0).reshape(-1, 1)
+        return imagesvec
+

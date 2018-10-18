@@ -40,105 +40,60 @@ Python version of the phasepack module by Juan M. Bujjamer.
 University of Buenos Aires, 2018.
 """
 # import cProfile
-from numpy.linalg import norm
 from imageio import imread
 from skimage import color
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.random import rand
 import time
-from phasepack.containers import Options
-from phasepack.matops import ConvolutionMatrix
-from phasepack.retrieval import Retrieval
 import scipy
-#########################################################################
-# Measurement Operator Definition
-#########################################################################
-# Create a measurement operator that maps a vector of pixels into Fourier
-# measurements using the random binary masks defined above.
-def Afunc(pixels, masks):
-    """ The fourier mask matrix operator
-    As the reconstruction method stores iterates as vectors, this
-    function needs to accept a vector as input.
-    """
-    nmasks, numrows, numcols = masks.shape
-    im = pixels.reshape(numrows, numcols)
-    measurements = np.fft.fft2(masks*im)
-    return measurements.reshape(nmasks*numrows*numcols, 1)
 
-# The adjoint/transpose of the measurement operator
-def Atfunc(measurements, masks):
-    # The reconstruction method stores measurements as vectors, so we need
-    # to accept a vector input, and convert it back into a 3D array of
-    # Fourier measurements.
-    nmasks, numrows, numcols = masks.shape
-    measurements = measurements.reshape(nmasks, numrows, numcols)
-    im = np.fft.ifft2(measurements)*masks*numrows*numcols
-    im_out = np.sum(im,axis=0).reshape(-1, 1)
-    return im_out
+from phasepack.containers import Options
+from phasepack.matops import ConvolutionMatrix, FourierOperator
+from phasepack.retrieval import Retrieval
 
+## Build a test problem
 # Specify the target image and number of measurements/masks
-image = imread('data/logo.jpg')      # Load the image from the 'data' folder.
-image = color.rgb2gray(image) # convert image to grayscale
-num_fourier_masks = 16              # Select the number of Fourier masks
-
-# Create 'num_fourier_masks' random binary masks. Store them in a 3d array.
-numrows, numcols = image.shape # Record image dimensions
-random_vars = rand(num_fourier_masks, numrows, numcols) # Start with random
-                                                        # variables
-masks = (random_vars<.5)*2 - 1  # Convert random variables into binary (+1/-1)
-                                # variables
-mv = lambda pixels: Afunc(pixels, masks)
-rmv= lambda measurements: Atfunc(measurements, masks)
-# Nete, the meanurement operator 'A', and it's adjoint 'At', are defined
-# below as separate functions
-x = image.reshape(-1, 1)   # Convert the signal/image into a vector so
-                           # PhasePack can handle it
-# b = abs(A(x)) Use the measurement operator 'A', defined below, to obtain
-# phaseless measurements.
-b = np.abs(Afunc(x, masks))
+image = imread('data/logo.jpg')  # Load the image from the 'data' folder.
+image = color.rgb2gray(image)    # Convert image to grayscale.
+num_fourier_masks = 16           # Select the number of Fourier masks.
+numrows, numcols = image.shape # Image dimensions
+# In this example we create masks consisting of random PSF's
+random_vars = rand(num_fourier_masks, numrows, numcols)
+masks = (random_vars<.5)*2 - 1  # Convert into binary (+1/-1) variables
+# Create the selected number of random binary masks, and build transformation
+# operators using the methods from the FourierOperator class.
+fo = FourierOperator(masks)
+mv = fo.mv # Operator vector
+rmv = fo.rmv # Transposed operator
+x = image.reshape(-1, 1)   # Convert the signal/image
+# Use the measurement operator mv, to obtain phaseless measurements.
+b = np.abs(mv(x))
 A = ConvolutionMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks,
                                      numrows*numcols))
-# Run the Phase retrieval Algorithm
-# Set options for PhasePack - this is where we choose the recovery algorithm.
-opts = Options(algorithm = 'twf',      # Use the truncated Wirtinger flow
-                                       # method to solve the retrieval
-                                       # problem. Try changing to 'Fienup'.
-               init_method = 'optimal', # Use a spectral method with optimized
 
-                                       # data pre-processing to generate an
-                                       # initial starting point for the solver.
-               tol = 1E-3,            # The tolerance - make this smaller for
-                                       # more accurate solutions, or larger
-                                       # for faster runtimes.
-               verbose = 2)            # Print out lots of information as the
-                                       # solver runs (set this to 1 or 0 for
-                                       # less output)
+## Run the Phase retrieval Algorithm
+# Set options for PhasePack - this is where we choose the recovery algorithm.
+opts = Options(algorithm = 'twf', init_method = 'optimal', tol = 1E-3,
+               verbose = 2)
 # Create an instance of the phase retrieval class, which manages initializers
 # and selection of solvers acording to the options provided.
 retrieval = Retrieval(A, b, opts)
-print('Running %s algorithm\n' % opts.algorithm)
-# Call the solver using the measurement operator 'A', its adjoint 'At', the
-# measurements 'b', the length of the signal to be recovered, and the
-# options.  Note, this method can accept either function handles or
-# matrices as measurement operators. Here, we use function handles
-# because we rely on the FFT to do things fast.
+# Call the solver using the measurement operator all the information provided
+# by the ConvolutionMatrix 'A'.
 x, outs, opts = retrieval.solve_phase_retrieval()
 # Convert the vector output back into a 2D image
 recovered_image = x.reshape(numrows, numcols)
 # Phase retrieval can only recover images up to a phase ambiguity.
-# Let's apply a phase rotation to align the recovered image with the
-# original so it looks nice when we display it.
+# Let's apply a phase rotation to align the recovered image with the original
+# so it looks nice when we display it.
 rotation = (recovered_image.conjugate().T@image)/\
             np.abs(recovered_image.conjugate().T@image)
 recovered_image = np.real(recovered_image)
-# Print some useful info to the console
-print('Image recovery required %d iterations (%f secs)\n'
-      % (outs.iteration_count, outs.solve_times[-1]))
-# Print some useful info to the console
+
+## Print and plot results
 print('Image recovery required %d iterations (%f secs)\n' %
       (outs.iteration_count, outs.solve_times[-1]))
-# Plot results
 fig, axes = plt.subplots(1, 3)
 # Plot the original image
 axes[0].imshow(image)

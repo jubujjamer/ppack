@@ -13,7 +13,7 @@ Run this module using a conda instalation of numpy and scipy (for efficiency sak
 ```
 conda install numpy scipy scikit-image numba imageio
 ```
-After this, you can run `run_image_reonstruction_demo.py` and `run_signal_reconstruction_demo.py` from the 'examples' folder to test all is working ok.
+After this, you can run `image_reonstruction.py` and `signal_reconstruction.py` from the 'examples' folder to test all is working ok.
 
 ## Who created Phasepack?
 
