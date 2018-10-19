@@ -47,9 +47,6 @@
 
 from numpy.linalg import norm
 
-# from phasepack.util import Options, build_test_problem, plot_error_convergence, plot_recovered_vs_original
-# from phasepack.solvers import solve_phase_retrieval
-
 from phasepack.containers import Options, plot_error_convergence, plot_recovered_vs_original
 from phasepack.matops import ConvolutionMatrix, FourierOperator
 from phasepack.retrieval import Retrieval
@@ -88,7 +85,6 @@ recon_error = norm(xt-x) /norm(xt)
 print('relative recon error = %.8f\n' % recon_error)
 # Finally, the user can plot the convergence results and the recovered signal x against the true signal xt
 # using two helper functions.
-
 # Plot a graph or error versus the number of iterations.
 plot_error_convergence(outs, opts)
 # Plot a graph of the recovered signal x against the true signal xt.

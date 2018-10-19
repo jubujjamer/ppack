@@ -38,7 +38,7 @@ from phasepack.retrieval import Retrieval
 
 # Parameters
 n = 100 # Dimension of unknown vector
-m = 8*n # Number of measurements
+m = 5*n # Number of measurements
 # Build the target signal
 x_true = randn(n, 1)+1j*randn(n, 1)
 # Create the measurement operator
