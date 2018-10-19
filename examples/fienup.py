@@ -47,17 +47,18 @@
 
 from numpy.linalg import norm
 
-from phasepack.util import Options, build_test_problem, plot_error_convergence, plot_recovered_vs_original
-from phasepack.solvers import solve_phase_retrieval
+# from phasepack.util import Options, build_test_problem, plot_error_convergence, plot_recovered_vs_original
+# from phasepack.solvers import solve_phase_retrieval
+
+from phasepack.containers import Options, plot_error_convergence, plot_recovered_vs_original
+from phasepack.matops import ConvolutionMatrix, FourierOperator
+from phasepack.retrieval import Retrieval
+from phasepack.math import sign, hermitic
 
 # Parameters
 n = 100 # Dimension of unknown vector
 m = 5*n # Number of measurements
 is_complex = True # If the signal and measurements are complex
-
-# Build a test problem
-print('Building test problem...');
-[A, xt, b0, At] = build_test_problem(m, n ,is_complex)
 
 # Options
 opts = Options(algorithm='Fienup',
@@ -68,8 +69,15 @@ opts = Options(algorithm='Fienup',
                record_recon_errors=False,
                record_measurement_errors=True,
                fienup_tuning = 0.5)
-# [x, outs, opts] =
-x, outs, opts = solve_phase_retrieval(A=A, At=A.T, b0=b0, n=n, opts=opts)
+
+retrieval = Retrieval(A=None, b0=None, opts=opts)
+
+# Build a test problem
+print('Building test problem...');
+[A, xt, b0] = retrieval.build_test_problem(m, n ,is_complex)
+
+x, outs, opts = retrieval.solve_phase_retrieval()
+# x, outs, opts = solve_phase_retrieval(A=A, At=A.T, b0=b0, n=n, opts=opts)
 # Determine the optim al phase rotation so that the recovered signal matches the true signal as well
 # as possible.
 alpha = (x.conjugate().T@xt)/(x.conjugate().T@x)

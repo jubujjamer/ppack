@@ -123,10 +123,9 @@ def  init_spectral(A, b0, At=None, is_scaled=False, is_truncated=False, verbose=
     # the mean during spectral initialization.
     if is_truncated:
         idx = np.abs(y)<=alphay**2*lambda0**2
-
     # Build the function handle associated to the matrix Y
     # in the TWF paper Algorithm 1
-    [eval, x0] = A.calc_yeigs(m, b0, idx)
+    x0 = A.calc_yeigs(m, b0, idx)
     # This part does not appear in the paper. We add it for better
     # performance. Rescale the solution to have approximately the correct
     # magnitude

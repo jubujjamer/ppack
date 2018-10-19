@@ -22,6 +22,7 @@ __author__ = 'Juan M. Bujjamer'
 import numpy as np
 from scipy.sparse.linalg import LinearOperator, eigs, lsqr
 from numpy.random import multivariate_normal as mvnrnd
+import matplotlib.pylab as plt
 
 class Options(object):
     """ A Class to manage options  for the reconstruction algorithms.

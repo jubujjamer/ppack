@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.random import multivariate_normal as mvnrnd
 
 from .matops import ConvolutionMatrix
 from .initializers import init_spectral, init_optimal_spectral
@@ -6,8 +7,9 @@ from .containers import Options
 from . import solvers as sv
 
 class Retrieval(object):
-    def __init__(self, A, b0, opts):
+    def __init__(self, A, b0, opts, x0=None):
         self.b0 = b0
+        self.x0 = x0
         # If opts is not provided, create it
         if opts is None:
             opts = Options()
@@ -19,7 +21,7 @@ class Retrieval(object):
 
     def _select_initializer(self):
         chosen_opt = self.opts.init_method.lower()
-        if chosen_opt == 'truncatedspectral' or chosen_opt == 'truncated':
+        if chosen_opt == 'truncated_spectral' or chosen_opt == 'truncated':
             return init_spectral(A=self.A, At=None, b0=self.b0, is_truncated=True,
                                 is_scaled=True, verbose=self.opts.verbose)
         elif chosen_opt == 'spectral':
@@ -67,6 +69,49 @@ class Retrieval(object):
                                     self.b0, x0, self.opts)
         return sol, outs, self.opts
 
+
+    def build_test_problem(self, m, n, is_complex=True, is_non_negative_only=False,
+                           data_type='gaussian'):
+        """ Creates and outputs random generated data and measurements.
+
+        Inputs:
+        isComplex(boolean, default=true): whether the signal and measurement
+        matrix is complex. is_non_negative_only(boolean, default=false):
+            whether the signal is real and non-negative.
+        data_type(string, default='gaussian'): it currently supports
+        ['gaussian', 'fourier'].
+
+        Outputs:
+        A: m x n measurement matrix/function handle.
+        xt: n x 1 vector, true signal.
+        b0: m x 1 vector, measurements.
+        At: A n x m matrix/function handle that is the transpose of A.
+        """
+        if data_type.lower() == 'gaussian':
+            # mvnrnd(np.zeros(n), np.eye(n)/2, m)
+            A = mvnrnd(np.zeros(n), np.eye(n)/2, m) + is_complex*1j*mvnrnd(np.zeros(n), np.eye(n)/2, m)
+            self.A = ConvolutionMatrix(A)
+            x = mvnrnd(np.zeros(n), np.eye(n)/2) + is_complex*1j*mvnrnd(np.zeros(n), np.eye(n)/2)
+            xt = x.reshape((-1, 1))
+            self.b0 = np.abs(A@xt)
+
+        # elif data_type.lower() is 'fourier':
+        # """Define the Fourier measurement operator.
+        #    The operator 'A' maps an n-vector into an m-vector, then computes the fft on that m-vector to produce m measurements.
+        # """
+        #     # rips first 'length' entries from a vector
+        #     rip = @(x,length) x(1:length);
+        #     A = @(x) fft([x;zeros(m-n,1)]);
+        #     At = @(x) rip(m*ifft(x),n);     % transpose of FM
+        #     xt = (mvnrnd(zeros(1, n), eye(n)/2) + is_complex * 1i * ...
+        #         mvnrnd(zeros(1, n), eye(n)/2))';
+        #     b0 = abs(A(xt)); % Compute the phaseless measurements
+
+        else:
+            print('Invalid data_type: %s', data_type)
+            raise Exception(TypeError)
+
+        return self.A, xt, self.b0
 
     def solve_phase_retrieval(self):
         """ This method solves the problem:

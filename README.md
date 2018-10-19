@@ -12,12 +12,23 @@ Up to now Fineup's algorithm and Truncated Wirtinger Flow method are working, al
 
 The original package used function handlers to perform least squares, eigenvectors and matrix vector products in an efficient way. In a similar fashion, this version uses scipy's LinearOperators, which allow the same operations to be performed with the same philosophy. Results and options have been placed in containers along with some methods to manage them and generic math operations and algorithms lie in its own file.
 
-## Installation
-Run this module using a binary installation of numpy and scipy (for efficiency sake, don't use pip). It's recommended to create a new conda environment with it's clean dependencies
+## Installation (temporary)
 
+First download or clone the phasepack package
+
+```
+git clone https://github.com/jubujjamer/phasepack.git
+```
+
+Then, it is highly recommended to run this module using a binary installation of numpy and scipy (for efficiency sake, don't use pip or it will run too slowly). In order to do so, create a new conda environment with it's clean dependencies
 ```
 conda create -n phasepack-env python=3.6 numpy scipy scikit-image imageio numba
 ```
+Once done, you could install the module
+```
+pip install phasepack
+```
+
 And you'll be free to test the examples `image_reconstruction.py` and `signal_reconstruction.py` after activating the environment.
 
 ## Who created Phasepack?

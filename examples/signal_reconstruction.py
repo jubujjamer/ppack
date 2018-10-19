@@ -1,14 +1,21 @@
 """
-This script will create phaseless measurements from a 1d test signal, and then recover the signal using phase retrieval methods.  We now describe the details of the simple recovery problem that this script implements.
+This script will create phaseless measurements from a 1d test signal, and then
+recover the signal using phase retrieval methods.  We now describe the details
+of the simple recovery problem that this script implements.
 
                         Recovery Problem
-This script creates a complex-valued random Gaussian signal. Measurements of the signal are then obtained by applying a linear operator to the signal, and computing the magnitude (i.e., removing the phase) of the results.
+This script creates a complex-valued random Gaussian signal. Measurements of
+the signal are then obtained by applying a linear operator to the signal, and
+computing the magnitude (i.e., removing the phase) of the results.
 
                       Measurement Operator
-Measurement are obtained using a linear operator, called 'A', that contains random Gaussian entries.
+Measurement are obtained using a linear operator, called 'A', that contains
+random Gaussian entries.
 
                      The Recovery Algorithm
-First, the recovery options should be given to the 'Options' class, which manages them and applies the default cases for each algorithm or initializer, in case of not being explicitly provided by the user.
+First, the recovery options should be given to the 'Options' class, which
+manages them and applies the default cases for each algorithm or initializer,
+in case of not being explicitly provided by the user.
 All the information about the problem is collectted in the 'Retrieval' class and
 the image is recovered by calling its method solve_phase_retrieval().
 

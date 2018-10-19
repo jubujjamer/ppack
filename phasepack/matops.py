@@ -33,7 +33,7 @@ class ConvolutionMatrix(object):
                 return A@v
             def rmv(v):
                 return A.conjugate().T@v
-        elif any([mv, rmv]):
+        elif any([mv is not None, rmv is not None]):
             if shape:
                 self.shape = shape
             else:
@@ -120,46 +120,6 @@ class ConvolutionMatrix(object):
         yfun = LinearOperator((self.n, self.n), matvec=ymatvec)
         [eval, x0] = eigs(yfun, k=1, which='LR',tol=1E-5)
         return x0
-
-def build_test_problem(m, n, is_complex=True, is_non_negative_only=False, data_type='Gaussian'):
-    """ Creates and outputs random generated data and measurements according to user's choice.
-
-    Inputs:
-      m(integer): number of measurements.
-      n(integer): length of the unknown signal.
-      isComplex(boolean, default=true): whether the signal and measurement matrix is complex. is_non_negative_only(boolean, default=false): whether the signal is real and non-negative.
-      data_type(string, default='gaussian'): it currently supports ['gaussian', 'fourier'].
-
-    Outputs:
-      A: m x n measurement matrix/function handle.
-      xt: n x 1 vector, true signal.
-      b0: m x 1 vector, measurements.
-      At: A n x m matrix/function handle that is the transpose of A.
-    """
-    if data_type.lower() == 'gaussian':
-        # mvnrnd(np.zeros(n), np.eye(n)/2, m)
-        A = mvnrnd(np.zeros(n), np.eye(n)/2, m) + is_complex*1j*mvnrnd(np.zeros(n), np.eye(n)/2, m)
-        At = A.conjugate().T
-        x = mvnrnd(np.zeros(n), np.eye(n)/2) + is_complex*1j*mvnrnd(np.zeros(n), np.eye(n)/2)
-        xt = x.reshape((-1, 1))
-        b0 = np.abs(A@xt)
-
-    # elif data_type.lower() is 'fourier':
-    # """Define the Fourier measurement operator.
-    #    The operator 'A' maps an n-vector into an m-vector, then computes the fft on that m-vector to produce m measurements.
-    # """
-    #     # rips first 'length' entries from a vector
-    #     rip = @(x,length) x(1:length);
-    #     A = @(x) fft([x;zeros(m-n,1)]);
-    #     At = @(x) rip(m*ifft(x),n);     % transpose of FM
-    #     xt = (mvnrnd(zeros(1, n), eye(n)/2) + is_complex * 1i * ...
-    #         mvnrnd(zeros(1, n), eye(n)/2))';
-    #     b0 = abs(A(xt)); % Compute the phaseless measurements
-
-    else:
-        print('Invalid data_type: %s', data_type)
-        raise Exception(TypeError)
-    return [A, xt, b0, At]
 
 class FourierOperator(object):
     """ Linear operator creator from problem data.
