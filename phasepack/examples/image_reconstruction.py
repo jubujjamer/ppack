@@ -51,6 +51,7 @@ import scipy
 from phasepack.containers import Options
 from phasepack.matops import ConvolutionMatrix, FourierOperator
 from phasepack.retrieval import Retrieval
+from phasepack.math import sign, hermitic
 
 ## Build a test problem
 # Specify the target image and number of measurements/masks
@@ -74,7 +75,7 @@ A = ConvolutionMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks,
 
 ## Run the Phase retrieval Algorithm
 # Set options for PhasePack - this is where we choose the recovery algorithm.
-opts = Options(algorithm = 'twf', init_method = 'optimal', tol = 1E-3,
+opts = Options(algorithm = 'twf', init_method = 'optimal', tol = 1E-4,
                verbose = 2)
 # Create an instance of the phase retrieval class, which manages initializers
 # and selection of solvers acording to the options provided.
@@ -87,9 +88,8 @@ recovered_image = x.reshape(numrows, numcols)
 # Phase retrieval can only recover images up to a phase ambiguity.
 # Let's apply a phase rotation to align the recovered image with the original
 # so it looks nice when we display it.
-rotation = (recovered_image.conjugate().T@image)/\
-            np.abs(recovered_image.conjugate().T@image)
-recovered_image = np.real(recovered_image)
+rotation = sign(hermitic(recovered_image.ravel())@image.ravel())
+recovered_image = np.real(rotation*recovered_image)
 
 ## Print and plot results
 print('Image recovery required %d iterations (%f secs)\n' %
@@ -101,4 +101,7 @@ axes[0].set_title('Original Image')
 # Plot the recovered image
 axes[1].imshow(np.real(recovered_image))
 axes[1].set_title('Recovered Image')
+axes[2].semilogy(outs.solve_times, outs.residuals)
+axes[2].set_title('Convergence curve')
+
 plt.show()

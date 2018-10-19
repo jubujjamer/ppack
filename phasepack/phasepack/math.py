@@ -403,3 +403,21 @@ def gradient_descent_solver(A, At, x0, b0, update_objective, opts):
             break
     sol = x1
     return sol, container
+
+def sign(x):
+    """ Definition of the sign function for the complex case.
+
+    Redefinition of the sign function to match MATLAB's complex case
+                            sign(x) = x/abs(x)
+
+    NOTE: numpy uses another convention.
+    """
+
+    return x/abs(x)
+
+def hermitic(x):
+    """ Hermitic operator definition for arrays.
+
+    NOTE: Could also use subclassing, but had to make more changes.
+    """
+    return x.conjugate()
