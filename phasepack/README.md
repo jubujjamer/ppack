@@ -12,7 +12,7 @@ Up to now Fineup's algorithm and Truncated Wirtinger Flow method are working, al
 
 The original package used function handlers to perform least squares, eigenvectors and matrix vector products in an efficient way. In a similar fashion, this version uses scipy's LinearOperators, which allow the same operations to be performed with the same philosophy. Results and options have been placed in containers along with some methods to manage them and generic math operations and algorithms lie in its own file.
 
-## Dependencies
+## Installation
 Run this module using a binary installation of numpy and scipy (for efficiency sake, don't use pip). It's recommended to create a new conda environment with it's clean dependencies
 
 ```
