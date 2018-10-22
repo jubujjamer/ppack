@@ -113,8 +113,11 @@ class ConvolutionMatrix(object):
             lvec = x
         return x*self.A # This is not optimal
 
-    def calc_yeigs(self, m, b0, idx):
-        v = (idx*b0**2).reshape(-1)
+    def calc_yeigs(self, m, b0, idx, squared=True ):
+        if squared:
+            v = (idx*b0**2).reshape(-1)
+        else:
+            v = (idx*b0).reshape(-1)
         def ymatvec(x):
             return 1/m*self.matrix.rmatvec(v*self.matrix.matvec(x))
         yfun = LinearOperator((self.n, self.n), matvec=ymatvec)

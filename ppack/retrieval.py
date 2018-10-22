@@ -26,11 +26,11 @@ class Retrieval(object):
                                 is_scaled=True, verbose=self.opts.verbose)
         elif chosen_opt == 'spectral':
             return init_spectral(A=self.A, At=None, b0=self.b0,
-                                is_truncatmax_timeed=False, is_scaled=True, verbose=self.opts.verbose)
+                                is_truncated=False,
+                                is_scaled=True, verbose=self.opts.verbose)
         elif chosen_opt == 'optimal' or chosen_opt == 'optimalspectral':
             return init_optimal_spectral(A=self.A, At=None, b0=self.b0,
-                                is_scaled=True,
-                                verbose=self.opts.verbose)
+                                is_scaled=True, verbose=self.opts.verbose)
         #elif chosen_opt == 'amplitudespectral' or chosen_opt == 'amplitude':
         #    return init_amplitude(A=A, At=At, b0=b0, n=n, verbose=opts.verbose)
         #elif chosen_opt == 'weightedspectral' or chosen_opt == 'weighted':

@@ -32,21 +32,24 @@ from numpy.random import randn
 import numpy as np
 import matplotlib.pyplot as plt
 
-from phasepack.containers import Options
-from phasepack.matops import ConvolutionMatrix
-from phasepack.retrieval import Retrieval
+from ppack.containers import Options
+from ppack.matops import ConvolutionMatrix
+from ppack.retrieval import Retrieval
 
 # Parameters
 n = 100 # Dimension of unknown vector
 m = 5*n # Number of measurements
 # Build the target signal
+from numpy.random import multivariate_normal as mvnrnd
 x_true = randn(n, 1)+1j*randn(n, 1)
 # Create the measurement operator
 A = ConvolutionMatrix(randn(m, n) + 1j*randn(m,n))
+# A = mvnrnd(np.zeros(n), np.eye(n)/2, m) + 1j*mvnrnd(np.zeros(n), np.eye(n)/2, m)
 # Compute phaseless measurements
-b = np.abs(A*x_true)
+b = np.abs(A@x_true)
 # Set options for PhasePack - this is where we choose the recovery algorithm
-opts = Options(algorithm='fienup', init_method='optimal', tol=1E-4,
+# Note the difference of using optimal and truncated_spectral methods.
+opts = Options(algorithm='fienup', init_method='optimal', tol=1E-6,
                verbose=2)
 # Create an instance of the phase retrieval class, which manages initializers
 # and selection of solvers acording to the options provided.

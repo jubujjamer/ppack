@@ -251,7 +251,7 @@ def init_optimal_spectral(A, b0, At=None, is_scaled=False, is_truncated=False, v
     # eigenvector because of greater efficiency.
     # Create opts struct for eigs
     # Yfunc = @(x) 1/m*At(T.*A(x));
-    x0 = A.calc_yeigs(m, T, idx)
+    x0 = A.calc_yeigs(m, T, idx, squared=False)
     if is_scaled:
         # Pick measurements according to the indices selected
         b = b0
