@@ -31,7 +31,7 @@ python setup.py install
 ```
 Now you are free to test the examples `image_reconstruction.py` and `signal_reconstruction.py` after activating the environment.
 ```
-source activate ppack
+source activate ppack-env
 python examples/image_reconstruction.py
 ```
 or (in windows)
