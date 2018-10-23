@@ -17,16 +17,16 @@ The original package used function handlers to perform least squares, eigenvecto
 First download or clone the phasepack package
 
 ```
-git clone https://github.com/jubujjamer/phasepack.git
+git clone https://github.com/jubujjamer/ppack.git
 ```
 
 Then, it is highly recommended to run this module using a binary installation of numpy and scipy (for efficiency sake, don't use pip or it will run too slowly). In order to do so, create a new conda environment with it's clean dependencies
 ```
-conda create -n phasepack-env python=3.6 numpy scipy scikit-image imageio numba
+conda create -n phasepack-env python=3.6 numpy scipy
 ```
 Once done, you could install the module
 ```
-pip install phasepack
+pip install ppack
 ```
 
 And you'll be free to test the examples `image_reconstruction.py` and `signal_reconstruction.py` after activating the environment.

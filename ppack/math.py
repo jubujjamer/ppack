@@ -17,8 +17,8 @@ from numpy.linalg import norm
 from numpy.random import randn
 
 from pdb import set_trace as bp
-from phasepack.containers import Options, ResultsContainer, display_verbose_output
-from phasepack.matops import ConvolutionMatrix
+from .containers import Options, ResultsContainer, display_verbose_output
+from .matops import ConvolutionMatrix
 
 class gd_options(object):
     """ Gradient Descent Algorithm Options manager.

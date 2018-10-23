@@ -27,6 +27,7 @@ Copyright (c) University of Maryland, 2017.
 Python version of the phasepack module by Juan M. Bujjamer.
 University of Buenos Aires, 2018.
 """
+import ppack
 from numpy.linalg import norm
 from numpy.random import randn
 import numpy as np

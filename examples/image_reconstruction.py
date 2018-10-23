@@ -40,6 +40,7 @@ Python version of the phasepack module by Juan M. Bujjamer.
 University of Buenos Aires, 2018.
 """
 # import cProfile
+import ppack
 from imageio import imread
 from skimage import color
 import numpy as np
@@ -48,10 +49,10 @@ from numpy.random import rand
 import time
 import scipy
 
-from phasepack.containers import Options
-from phasepack.matops import ConvolutionMatrix, FourierOperator
-from phasepack.retrieval import Retrieval
-from phasepack.math import sign, hermitic
+from ppack.containers import Options
+from ppack.matops import ConvolutionMatrix, FourierOperator
+from ppack.retrieval import Retrieval
+from ppack.math import sign, hermitic
 
 ## Build a test problem
 # Specify the target image and number of measurements/masks

@@ -43,6 +43,7 @@ Python version of the phasepack module by Juan M. Bujjamer.
 University of Buenos Aires, 2018.
 """
 
+import ppack
 from numpy.linalg import norm
 
 from phasepack.containers import Options, plot_error_convergence, plot_recovered_vs_original
