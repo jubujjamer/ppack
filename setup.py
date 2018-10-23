@@ -16,7 +16,7 @@ except:
     raise ImportError('Module scipy is not installed.\n\
     Please run \'conda install scipy\' from a conda environment.')
 
-install_requires=['scikit-image', 'imageio', 'numba'],
+install_requires=['matplotlib', 'scikit-image', 'imageio', 'numba'],
 setup(name='ppack',
         version='0.1',
         description='A collection of phase retrieval methods.',
