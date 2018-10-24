@@ -24,19 +24,21 @@ Then, it is highly recommended to run this module using a binary installation of
 ```
 conda create -n ppack-env python=3.6 numpy scipy
 ```
-Once done, activate the environment, then cd to the ppack folder and and proceed to install the module
+Before proceeding, activate the environment
 ```
 source activate ppack-env
+```
+or (in windows)
+```
+activate ppack-env
+```
+Once done, cd to the ppack folder and proceed to install the module
+```
 cd ppack
 python setup.py install
 ```
 Now you are free to test the examples `image_reconstruction.py` and `signal_reconstruction.py` after activating the environment.
 ```
-python examples/image_reconstruction.py
-```
-or (in windows)
-```
-activate ppack
 python examples/image_reconstruction.py
 ```
 ## Who created Phasepack?
