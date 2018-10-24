@@ -54,4 +54,8 @@ Tom Goldstein - University of Maryland
 
 ## Who am I?
 
-Juan M. Bujjamer - University of Buenos Aires
+Juan M. Bujjamer - FCEN - University of Buenos Aires
+
+Engineering PhD Student, supervised by PhD Hernan E. Grecco
+
+Please, contact me at jubujjamer@df.uba.ar
