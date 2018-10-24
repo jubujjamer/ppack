@@ -16,9 +16,7 @@ created by multiplying the image (coordinate-wise) by a 'mask,' and then
 computing the Fourier transform of the product.  There are 8 masks,
 each of which is an array of binary (+1/-1) variables. The output of
 the linear measurement operator contains the Fourier modes produced by
-all 8 masks.  The measurement operator, 'A', is defined as a separate
-function near the end of the file.  The adjoint/transpose of the
-measurement operator is also defined, and is called 'At'.
+all 8 masks.
 
                         Data structures
 PhasePack assumes that unknowns take the form of vectors (rather than 2d
@@ -45,6 +43,8 @@ import ppack
 from imageio import imread
 from skimage import color
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from numpy.random import rand
 import time
@@ -59,26 +59,68 @@ from ppack.math import sign, hermitic
 # Specify the target image and number of measurements/masks
 image = imread('ppack/data/logo.jpg')  # Load the image from the 'data' folder.
 image = color.rgb2gray(image)    # Convert image to grayscale.
-num_fourier_masks = 16           # Select the number of Fourier masks.
+nummasks = 16           # Select the number of Fourier masks.
 numrows, numcols = image.shape # Image dimensions
-# In this example we create masks consisting of random PSF's
-random_vars = rand(num_fourier_masks, numrows, numcols)
-masks = (random_vars<.5)*2 - 1  # Convert into binary (+1/-1) variables
-masks = 1j*masks+masks
-# Create the selected number of random binary masks, and build transformation
-# operators using the methods from the FourierOperator class.
+# image = np.fft.fftshift(np.fft.fft2(image))
+x = image.reshape(-1, 1)
+# Create masks consisting of circular pupil apertures
+# The idea is to iterate over led matrix in rectangular coordinates, starting
+# by the center and going through the square in spirals.
+def rectangular_iterator(n, m):
+    """ Defines a rectangular iterator for the pupil construction.
+    """
+    yc, xc =  [m//2, n//2] # image center
+    end_index = 20
+    delta = 80
+    def out_dict(x, y):
+        nx = xc+x
+        ny = yc+y
+        return np.array((nx, ny))
+
+    yield out_dict(0, 0)
+    for i in np.arange(1, end_index+1):
+        increasing = np.arange(-i+1, i+1, delta)
+        decreasing = np.arange(i-1, -i-1, -delta)
+        for y in increasing:
+            yield out_dict(i, y)
+        for x in decreasing:
+            yield out_dict(x, i)
+        for y in decreasing:
+            yield out_dict(-i, y)
+        for x in increasing:
+            yield out_dict(x, -i)
+
+iterator = rectangular_iterator(numcols, numrows)
+xx, yy = np.meshgrid(range(numcols), range(numrows))
+image_gray = np.zeros_like(image)
+masks = np.zeros((nummasks, numrows, numcols))*1j
+fig, ax = plt.subplots(1, 1)
+fig.show()
+for j in range(nummasks):
+    ny, nx = next(iterator)
+    # Create a circular array
+    c = (xx-nx)**2+(yy-ny)**2
+    image_gray = [c < 100**2][0]
+    ax.cla()
+    ax.imshow(image_gray)
+    fig.canvas.draw()
+    psf = np.fft.fft2(image_gray)
+    # psd = np.fft.fftshift(psf)
+    masks[j,:,:] = psf
+nummasks, numrows, numcols = masks.shape
 fo = FourierOperator(masks)
-mv = fo.mv # Operator vector
-rmv = fo.rmv # Transposed operator
-x = image.reshape(-1, 1)   # Convert the signal/image
-# Use the measurement operator mv, to obtain phaseless measurements.
-b = np.abs(mv(x))
-A = ConvolutionMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks,
-                                     numrows*numcols))
+A = ConvolutionMatrix(mv=fo.mv, rmv=fo.rmv, shape=(numrows*numcols*nummasks,
+                                                   numrows*numcols))
+b = np.abs(fo.mv(x))
+bimage = b[:numrows*numcols].reshape(numrows,numcols)
+# image = np.fft.fftshift(bimage)
+# plt.imshow(np.abs(np.fft.ifft2(bimage)))
+plt.imshow(np.abs((bimage)))
+plt.show()
 ## Run the Phase retrieval Algorithm
 # Set options for PhasePack - this is where we choose the recovery algorithm.
-opts = Options(algorithm = 'twf', init_method = 'truncated_spectral', tol = 1E-3,
-               verbose = 2)
+opts = Options(algorithm = 'fienup', init_method = 'truncated_spectral', tol =
+               5E-3, verbose = 2, max_iters=20)
 # Create an instance of the phase retrieval class, which manages initializers
 # and selection of solvers acording to the options provided.
 retrieval = Retrieval(A, b, opts)
@@ -98,7 +140,7 @@ print('Image recovery required %d iterations (%f secs)\n' %
       (outs.iteration_count, outs.solve_times[-1]))
 fig, axes = plt.subplots(1, 3)
 # Plot the original image
-axes[0].imshow(image)
+# axes[0].imshow(image)
 axes[0].set_title('Original Image')
 # Plot the recovered image
 axes[1].imshow(np.real(recovered_image))

@@ -63,12 +63,17 @@ class ConvolutionMatrix(object):
     def check_adjoint(self):
         """ Check that A and At are indeed ajoints of one another
         """
-        y = np.random.randn(self.m);
+        y = np.random.randn(self.m)
         Aty = self.matrix.rmatvec(y)
         x = np.random.randn(self.n)
         Ax = self.matrix.matvec(x)
+        print(Ax)
+        print(Ax.conjugate()-Ax)
+
         inner_product1 = Ax.conjugate().T@y
         inner_product2 = x.conjugate().T@Aty
+        print(inner_product1)
+        print(inner_product2)
         error = np.abs(inner_product1-inner_product2)/np.abs(inner_product1)
         assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
         print('Both matrices were adjoints', error)
@@ -77,14 +82,12 @@ class ConvolutionMatrix(object):
         return
 
     def lsqr(self, b, tol, maxit, x0):
-        """ Solution of the least squares problem for ConvolutionMatrix
-        Gkp, opts.tol/100, opts.max_inner_iters, gk
+        """ Solution of the least squares problem for ConvolutionMatrix.
         """
         if b.shape[1]>0:
             b = b.reshape(-1)
         if x0.shape[1]>0:
             x0 = x0.reshape(-1)
-        # x, istop, itn, r1norm = lsqr(self.matrix, b, atol=tol, btol=tol, iter_lim=maxit, x0=x0)
         ret = lsqr(self.matrix, b, damp=0.01, atol=tol/100, btol=tol/100, iter_lim=maxit, x0=x0)
         x = ret[0]
         return x
