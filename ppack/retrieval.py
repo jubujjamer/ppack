@@ -96,9 +96,11 @@ class Retrieval(object):
             self.b0 = np.abs(A@xt)
 
         # elif data_type.lower() is 'fourier':
-        # """Define the Fourier measurement operator.
-        #    The operator 'A' maps an n-vector into an m-vector, then computes the fft on that m-vector to produce m measurements.
-        # """
+        #     """Define the Fourier measurement operator.
+
+        #     The operator 'A' maps an n-vector into an m-vector, then computes
+        #     the fft on that m-vector to produce m measurements.
+        #     """
         #     # rips first 'length' entries from a vector
         #     rip = @(x,length) x(1:length);
         #     A = @(x) fft([x;zeros(m-n,1)]);

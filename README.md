@@ -24,14 +24,14 @@ Then, it is highly recommended to run this module using a binary installation of
 ```
 conda create -n ppack-env python=3.6 numpy scipy
 ```
-Once done, cd to the ppack folder and and proceed to install the module
+Once done, activate the environment, then cd to the ppack folder and and proceed to install the module
 ```
+source activate ppack-env
 cd ppack
 python setup.py install
 ```
 Now you are free to test the examples `image_reconstruction.py` and `signal_reconstruction.py` after activating the environment.
 ```
-source activate ppack-env
 python examples/image_reconstruction.py
 ```
 or (in windows)
