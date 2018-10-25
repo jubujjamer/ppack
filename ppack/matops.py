@@ -19,6 +19,7 @@ __version__ = "1.0.0"
 __author__ = 'Juan M. Bujjamer'
 
 import numpy as np
+from numpy.fft import fft2, ifft2, fftshift
 from scipy.sparse.linalg import LinearOperator, eigs, lsqr
 from numpy.random import multivariate_normal as mvnrnd
 
@@ -67,12 +68,9 @@ class ConvolutionMatrix(object):
         Aty = self.matrix.rmatvec(y)
         x = np.random.randn(self.n)
         Ax = self.matrix.matvec(x)
-        print(Ax)
-        print(Ax.conjugate()-Ax)
-
         inner_product1 = Ax.conjugate().T@y
         inner_product2 = x.conjugate().T@Aty
-        print(inner_product1)
+        print(1j*inner_product1)
         print(inner_product2)
         error = np.abs(inner_product1-inner_product2)/np.abs(inner_product1)
         assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
@@ -157,7 +155,7 @@ class FourierOperator(object):
         # Fourier measurements.
         bvec2d_array = bvec.reshape(self.npsf, self.nrows, self.ncols)
         conv_images = np.fft.ifft2(bvec2d_array)
-        conv_images = conv_images*self.psf_collection*self.nrows*self.ncols
+        conv_images = conv_images*self.psf_collection.conjugate()*self.nrows*self.ncols
         imagesvec = np.sum(conv_images,axis=0).reshape(-1, 1)
         return imagesvec
 

@@ -71,7 +71,7 @@ def rectangular_iterator(n, m):
     """
     yc, xc =  [m//2, n//2] # image center
     end_index = 20
-    delta = 80
+    delta = 2
     def out_dict(x, y):
         nx = xc+x
         ny = yc+y
@@ -93,7 +93,7 @@ def rectangular_iterator(n, m):
 iterator = rectangular_iterator(numcols, numrows)
 xx, yy = np.meshgrid(range(numcols), range(numrows))
 image_gray = np.zeros_like(image)
-masks = np.zeros((nummasks, numrows, numcols))*1j
+masks = np.zeros((nummasks, numrows, numcols))
 fig, ax = plt.subplots(1, 1)
 fig.show()
 for j in range(nummasks):
@@ -101,12 +101,15 @@ for j in range(nummasks):
     # Create a circular array
     c = (xx-nx)**2+(yy-ny)**2
     image_gray = [c < 100**2][0]
-    ax.cla()
-    ax.imshow(image_gray)
-    fig.canvas.draw()
     psf = np.fft.fft2(image_gray)
+    psf = rand(numrows, numcols)
     # psd = np.fft.fftshift(psf)
-    masks[j,:,:] = psf
+    masks[j,:,:] = (psf<0.95)*2-1
+    # masks[j,:,:] = image_gray*2-1
+    print(np.real(masks[j,:,:]))
+    ax.cla()
+    ax.imshow(masks[j,:,:])
+    fig.canvas.draw()
 nummasks, numrows, numcols = masks.shape
 fo = FourierOperator(masks)
 A = ConvolutionMatrix(mv=fo.mv, rmv=fo.rmv, shape=(numrows*numcols*nummasks,
@@ -115,9 +118,9 @@ b = np.abs(fo.mv(x))
 bimage = b[:numrows*numcols].reshape(numrows,numcols)
 # image = np.fft.fftshift(bimage)
 # plt.imshow(np.abs(np.fft.ifft2(bimage)))
-plt.imshow(np.abs((bimage)))
-plt.show()
-## Run the Phase retrieval Algorithm
+# plt.imshow(np.abs((bimage)))
+# # plt.show()
+# ## Run the Phase retrieval Algorithm
 # Set options for PhasePack - this is where we choose the recovery algorithm.
 opts = Options(algorithm = 'fienup', init_method = 'truncated_spectral', tol =
                5E-3, verbose = 2, max_iters=20)

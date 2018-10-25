@@ -153,12 +153,12 @@ def solve_fienup(A, At, b0, x0, opts):
         # i.e. m==n)
         #                    gkp = inverse fourier transform of Gkp
         gkp = A.lsqr(Gkp, opts.tol, opts.max_inner_iters, gk)
+        # gkp = np.fft.ifft(Gkp)
         # If the signal is real and non-negative, Fienup updates object domain
         # following the constraint
         if not opts.is_complex and opts.is_non_negative_only:
             inds = gkp < 0  # Get indices that are outside the non-negative constraints. May also need to check if isreal
             inds2 = not inds # Get the complementary indices
-            print(inds2)
             # hybrid input-output (see Section V, Equation (44))
             gknew[inds] = gk[inds] - beta*gkp[inds]
             gknew[inds2] = gkp[inds2]

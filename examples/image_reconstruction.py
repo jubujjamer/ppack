@@ -64,7 +64,7 @@ numrows, numcols = image.shape # Image dimensions
 # In this example we create masks consisting of random PSF's
 random_vars = rand(num_fourier_masks, numrows, numcols)
 masks = (random_vars<.5)*2 - 1  # Convert into binary (+1/-1) variables
-masks = 1j*masks+masks
+# masks = 1j*masks
 # Create the selected number of random binary masks, and build transformation
 # operators using the methods from the FourierOperator class.
 fo = FourierOperator(masks)
