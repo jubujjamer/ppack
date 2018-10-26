@@ -151,7 +151,10 @@ class Options(object):
                 setattr(self, key, val)
 
         for key, val in spec_defaults[self.algorithm.lower()].items():
-            setattr(self, key, val)
+            if key in kwargs.keys():
+                setattr(self, key, kwargs[key])
+            else:
+                setattr(self, key, val)
 
 class ResultsContainer(object):
     """

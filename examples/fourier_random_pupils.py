@@ -66,30 +66,27 @@ ximg = image.reshape(-1, 1)
 # Create masks consisting of circular pupil apertures
 # The idea is to iterate over led matrix in rectangular coordinates, starting
 # by the center and going through the square in spirals.
-def rectangular_iterator(n, m):
+
+## Build a test problem
+# Specify the target image and number of measurements/masks
+image = imread('ppack/data/shapes.png')  # Load the image from the 'data' folder.
+image = color.rgb2gray(image)    # Convert image to grayscale.
+nummasks = 32           # Select the number of Fourier masks.
+numrows, numcols = image.shape # Image dimensions
+ximg = image.reshape(-1, 1)
+# Create masks consisting of circular pupil apertures
+# The idea is to iterate over led matrix in rectangular coordinates, starting
+# by the center and going through the square in spirals.
+def random_iterator(n, m):
     """ Defines a rectangular iterator for the pupil construction.
     """
     yc, xc =  [m//2, n//2] # image center
-    end_index = 20
-    delta = 40
-    def out_dict(x, y):
-        nx = xc+x
-        ny = yc+y
-        return np.array((nx, ny))
-    yield out_dict(0, 0)
-    for i in np.arange(1, end_index+1):
-        increasing = np.arange(-i+1, i+1, delta)
-        decreasing = np.arange(i-1, -i-1, -delta)
-        for y in increasing:
-            yield out_dict(i, y)
-        for x in decreasing:
-            yield out_dict(x, i)
-        for y in decreasing:
-            yield out_dict(-i, y)
-        for x in increasing:
-            yield out_dict(x, -i)
+    for i in range(100):
+        x = np.random.randint(10,n-10)
+        y = np.random.randint(10,m-10)
+        yield x, y
 
-iterator = rectangular_iterator(numcols, numrows)
+iterator = random_iterator(numcols, numrows)
 xx, yy = np.meshgrid(range(numcols), range(numrows))
 image_gray = np.zeros_like(image)
 masks = np.zeros((nummasks, numrows, numcols))
@@ -101,23 +98,19 @@ for j in range(nummasks):
     c = (xx-nx)**2+(yy-ny)**2
     image_gray = [c < 5**2][0]
     psf = fftshift(image_gray)
-    # psf = rand(numrows, numcols)
-    # psd = np.fft.fftshift(psf)
-    # masks[j,:,:] = (psf<0.5)*2-1
     masks[j,:,:] =  psf
-    # ax.cla()
-    # ax.imshow(masks[j,:,:])
-    # fig.canvas.draw()
+    ax.cla()
+    ax.imshow(masks[j,:,:])
+    fig.canvas.draw()
 nummasks, numrows, numcols = masks.shape
 fo = FourierOperator(masks)
 b = np.abs(fo.mv(ximg))
 A = ConvolutionMatrix(mv=fo.mv, rmv=fo.rmv, shape=(numrows*numcols*nummasks,
                                                    numrows*numcols))
-# bimage = b[:numrows*numcols].reshape(numrows,numcols)
 # ## Run the Phase retrieval Algorithm
 # Set options for PhasePack - this is where we choose the recovery algorithm.
-opts = Options(algorithm = 'fienup', init_method = 'optimal', tol =
-               5E-4, verbose = 2, max_iters=60)
+opts = Options(algorithm = 'fienup', init_method = 'truncated_spectral', tol =
+               5E-4, verbose = 2, max_iters=60, alpha_ub=5, alpha_lb=.03, alpha_h=6)
 # Create an instance of the phase retrieval class, which manages initializers
 # and selection of solvers acording to the options provided.
 retrieval = Retrieval(A, b, opts)
