@@ -193,3 +193,50 @@ class FourierOperator(object):
         # plt.show()
         return imagesvec
 
+class FPMOperator(object):
+    """ Linear operator creator from problem data.
+
+        Create a measurement operator that maps a vector of pixels into Fourier
+        measurements using a collection of PSF's.
+    """
+    def __init__(self, psf_collection, m, n):
+        npsf, nrows, ncols = psf_collection.shape
+        self.psf_collection = psf_collection
+        self.npsf = npsf
+        self.nrows = nrows
+        self.ncols = ncols
+        self.m = m
+        self.n = n
+        self.ratio = n//m
+
+
+    def mv(self, xvec):
+        """The fourier mask matrix operator.
+
+        It aplies an FT and then rescales the result.
+
+        As the reconstruction method stores iterates as vectors, this
+        function needs to accept a vector as input.
+        """
+        from skimage.transform import rescale
+
+        xvec2d = xvec.reshape(self.nrows, self.ncols)
+        xvec2d_fft = fft2(xvec2d)
+        bvec2d = ifft2(self.psf_collection*xvec2d_fft)
+        bvec_rescaled = bvec2d[:,::self.ratio,::self.ratio]
+        bvec_array = bvec_rescaled.reshape(self.npsf*self.m*self.m, 1)
+        return bvec_array
+
+    def rmv(self, bvec):
+        # The adjoint/transpose of the measurement operator
+        # The reconstruction method stores measurements as vectors, so we need
+        # to accept a vector input, and convert it back into a 3D array of
+        # Fourier measurements.
+        padded_bvec = np.zeros((self.npsf,self.n,self.n), dtype=complex)
+        padded_bvec[:,::self.ratio,::self.ratio] = bvec.reshape(self.npsf, self.m, self.m)
+        bvec2d_array = padded_bvec.reshape(self.npsf, self.n, self.n)
+        conv_images = fft2(bvec2d_array)
+        conv_images = conv_images*self.psf_collection.conjugate()
+        conv_images = ifft2(conv_images)
+        imagesvec = np.sum(conv_images, axis=0).reshape(-1, 1)
+        return imagesvec
