@@ -77,8 +77,8 @@ A = ConvolutionMatrix(mv=mv, rmv=rmv, shape=(numrows*numcols*num_fourier_masks,
                                      numrows*numcols))
 ## Run the Phase retrieval Algorithm
 # Set options for PhasePack - this is where we choose the recovery algorithm.
-opts = Options(algorithm = 'twf', init_method = 'truncated_spectral', tol = 1E-3,
-               verbose = 2)
+opts = Options(algorithm = 'fienup', init_method = 'truncated_spectral', tol =
+               5E-4, verbose = 2, max_iters=5, alpha_ub=.1, alpha_lb=.002, alpha_h=1)
 # Create an instance of the phase retrieval class, which manages initializers
 # and selection of solvers acording to the options provided.
 retrieval = Retrieval(A, b, opts)

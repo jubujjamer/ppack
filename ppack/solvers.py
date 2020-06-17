@@ -15,7 +15,6 @@ Copyright (c) University of Maryland, 2017.
 Python version of the phasepack module by Juan M. Bujjamer.
 University of Buenos Aires, 2018.
 """
-from numba import jit
 import time
 import warnings
 import numpy as np
@@ -255,8 +254,9 @@ def solve_twf(A, At, b0, x0, opts):
         Eh  =  np.abs(y-Axabs**2) <= opts.alpha_h*Kt*Axabs/normx
         mask = Eub*Elb*Eh
         s = np.sum(mask)
+        print('limits', Axabs/normx, opts.alpha_lb)
+        # print(Eub, Elb, Eh)
 
-        @jit(nopython=True)
         def f(z):
             absz = np.abs(z)**2
             argument = absz-y*np.log(absz)

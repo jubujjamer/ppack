@@ -69,14 +69,9 @@ class ConvolutionMatrix(object):
         Aty = self.matrix.rmatvec(y)
         x = np.random.randn(self.n)
         Ax = self.matrix.matvec(x)
-        # inner_product1 = Ax.conjugate().T@y
-        # inner_product2 = x.conjugate().T@Aty
         inner_product1 = y.conjugate().T@Ax
         inner_product2 = Aty.conjugate().T@x
-        print(inner_product1)
-        print(inner_product2)
         error = np.abs(inner_product1-inner_product2)/np.abs(inner_product1)
-        # assert error<1e-3, 'Invalid measurement operator:  At is not the adjoint of A.  Error = %.1f' % error
         print('Both matrices were adjoints', error)
 
     def hermitic(self):
@@ -171,10 +166,10 @@ class FourierOperator(object):
         xvec2d_fft = fft2(xvec2d)
         bvec2d = ifft2(self.psf_collection*xvec2d_fft)
         bvec_array = bvec2d.reshape(self.npsf*self.nrows*self.ncols, 1)
-        fig, (ax1, ax2) = plt.subplots(1, 2)
-        ax1.imshow(np.abs(bvec2d[0,:,:]))
-        ax2.imshow(np.abs(self.psf_collection[0,:,:]))
-        plt.show()
+        # fig, (ax1, ax2) = plt.subplots(1, 2)
+        # ax1.imshow(np.abs(bvec2d[0,:,:]))
+        # ax2.imshow(np.abs(self.psf_collection[0,:,:]))
+        # plt.show()
         return bvec_array
 
     def rmv(self, bvec):
@@ -209,7 +204,6 @@ class FPMOperator(object):
         self.n = n
         self.ratio = n//m
 
-
     def mv(self, xvec):
         """The fourier mask matrix operator.
 
@@ -218,13 +212,12 @@ class FPMOperator(object):
         As the reconstruction method stores iterates as vectors, this
         function needs to accept a vector as input.
         """
-        from skimage.transform import rescale
-
         xvec2d = xvec.reshape(self.nrows, self.ncols)
         xvec2d_fft = fft2(xvec2d)
         bvec2d = ifft2(self.psf_collection*xvec2d_fft)
-        bvec_rescaled = bvec2d[:,::self.ratio,::self.ratio]
-        bvec_array = bvec_rescaled.reshape(self.npsf*self.m*self.m, 1)
+        bvec_rescaled = bvec2d[:,0::self.ratio,0::self.ratio]
+        # bvec_array = bvec_rescaled.reshape(self.npsf*self.m*self.m, 1)
+        bvec_array = bvec_rescaled.ravel()
         return bvec_array
 
     def rmv(self, bvec):
